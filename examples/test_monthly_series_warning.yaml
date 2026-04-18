@@ -1,0 +1,63 @@
+# SWAT Monthly Series Warning Demo
+
+version: "swat"
+
+basic:
+  projectPath: "E:\\BMPs\\TxtInOut"
+  workPath: "./work_warning"
+  command: "swat.exe"
+
+parameters:
+  design:
+    - name: CN2
+      bounds: [35, 98]
+    - name: ALPHA_BF
+      bounds: [0, 1]
+    - name: GW_DELAY
+      bounds: [0, 500]
+
+series:
+  - id: flow_month
+    desc: "Monthly streamflow"
+    sim:
+      file: output.rch
+      subbasin: 62
+      period: [2019-02, 2021-11]
+      timestep: monthly
+      colSpan: [50, 61]
+    obs:
+      file: obs_flow_monthly.txt
+      rowRanges:
+        - [2, 35]
+      colSpan: [1, 12]
+
+  - id: flow_matrix
+    desc: "Derived matrix-shaped flow"
+    sim:
+      call:
+        func: flow_as_matrix
+        args: [flow_month.sim]
+
+functions:
+  - name: NSE
+    kind: builtin
+  - name: flow_as_matrix
+    kind: external
+    file: "series_transform_warning.py"
+    args: [flow_month_sim]
+
+derived:
+  - id: nse_flow_month
+    call:
+      func: NSE
+      args: [flow_month.sim, flow_month.obs]
+
+objectives:
+  items:
+    - id: obj_nse
+      desc: "Maximize NSE"
+      ref: nse_flow_month
+      sense: max
+
+reporter:
+  flushInterval: 1

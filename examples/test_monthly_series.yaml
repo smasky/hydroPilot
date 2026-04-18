@@ -1,0 +1,99 @@
+# SWAT Monthly Series Test — period slicing + derived series
+#
+# Test project: E:\BMPs\TxtInOut
+
+version: "swat"
+
+basic:
+  projectPath: "E:\\BMPs\\TxtInOut"
+  workPath: "./work"
+  command: "swat.exe"
+
+parameters:
+  design:
+    - name: CN2
+      bounds: [35, 98]
+    - name: ALPHA_BF
+      bounds: [0, 1]
+    - name: GW_DELAY
+      bounds: [0, 500]
+
+series:
+  - id: flow_month
+    desc: "Monthly streamflow with month period"
+    sim:
+      file: output.rch
+      subbasin: 62
+      period: [2019-02, 2021-11]
+      timestep: monthly
+      colSpan: [50, 61]
+    obs:
+      file: obs_flow_monthly.txt
+      rowRanges:
+        - [2, 35]
+      colSpan: [1, 12]
+
+  - id: flow_date
+    desc: "Monthly streamflow with date period"
+    sim:
+      file: output.rch
+      subbasin: 62
+      period: [2019-02-03, 2021-11-01]
+      timestep: monthly
+      colSpan: [50, 61]
+    obs:
+      file: obs_flow_monthly.txt
+      rowRanges:
+        - [2, 35]
+      colSpan: [1, 12]
+
+functions:
+  - name: NSE
+    kind: builtin
+  - name: RMSE
+    kind: builtin
+  - name: flow_times_two
+    kind: external
+    file: "series_transform.py"
+    args: [flow_month_sim]
+  - name: series_equal
+    kind: external
+    file: "series_transform.py"
+    args: [flow_month_sim, flow_date_sim]
+
+derived:
+  - id: nse_flow_month
+    call:
+      func: NSE
+      args: [flow_month.sim, flow_month.obs]
+  - id: rmse_flow_month
+    call:
+      func: RMSE
+      args: [flow_month.sim, flow_month.obs]
+  - id: flow_month_times_two
+    call:
+      func: flow_times_two
+      args: [flow_month.sim]
+  - id: period_series_equal
+    call:
+      func: series_equal
+      args: [flow_month.sim, flow_date.sim]
+
+objectives:
+  items:
+    - id: obj_nse
+      desc: "Maximize NSE"
+      ref: nse_flow_month
+      sense: max
+
+diagnostics:
+  items:
+    - id: diag_rmse
+      name: "RMSE flow"
+      ref: rmse_flow_month
+    - id: diag_flow_times_two
+      name: "Flow times two"
+      ref: flow_month_times_two
+    - id: diag_period_equal
+      name: "Period series equal"
+      ref: period_series_equal

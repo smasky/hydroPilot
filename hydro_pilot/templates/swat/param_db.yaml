@@ -1,0 +1,1707 @@
+# SWAT Parameter Database
+# Generated from swatParam.txt
+#
+# Structure per entry:
+#   type: "int" (precision=0) or "float"
+#   bounds: [absoluteMin, absoluteMax]
+#   file: {name, line, start, width, precision, maxNum}
+#
+# file.name: "basins.bsn" for bsn params, "*.ext" for others
+# file.maxNum: 10 for sol multi-layer params (line 8~21), 1 for others
+# bounds use .inf / -.inf for unbounded
+
+# ========== .hru parameters ==========
+HRU_FR:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.hru", line: 2, start: 1, width: 16, precision: 7, maxNum: 1}
+
+SLSUBBSN:
+  type: float
+  bounds: [10.0, 150.0]
+  file: {name: "[0-9]*.hru", line: 3, start: 1, width: 16, precision: 3, maxNum: 1}
+
+HRU_SLP:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.hru", line: 4, start: 1, width: 16, precision: 3, maxNum: 1}
+
+OV_N:
+  type: float
+  bounds: [0.01, 30.0]
+  file: {name: "[0-9]*.hru", line: 5, start: 1, width: 16, precision: 3, maxNum: 1}
+
+LAT_TTIME:
+  type: float
+  bounds: [0.0, 180.0]
+  file: {name: "[0-9]*.hru", line: 6, start: 1, width: 16, precision: 3, maxNum: 1}
+
+LAT_SED:
+  type: float
+  bounds: [0.0, 5000.0]
+  file: {name: "[0-9]*.hru", line: 7, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SLSOIL:
+  type: float
+  bounds: [0.0, 150.0]
+  file: {name: "[0-9]*.hru", line: 8, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CANMX:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "[0-9]*.hru", line: 9, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ESCO_HRU:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.hru", line: 10, start: 1, width: 16, precision: 3, maxNum: 1}
+
+EPCO_HRU:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.hru", line: 11, start: 1, width: 16, precision: 3, maxNum: 1}
+
+RSDIN:
+  type: float
+  bounds: [0.0, 10000.0]
+  file: {name: "[0-9]*.hru", line: 12, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ERORGN:
+  type: float
+  bounds: [0.0, 5.0]
+  file: {name: "[0-9]*.hru", line: 13, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ERORGP:
+  type: float
+  bounds: [0.0, 5.0]
+  file: {name: "[0-9]*.hru", line: 14, start: 1, width: 16, precision: 3, maxNum: 1}
+
+POT_FR:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.hru", line: 15, start: 1, width: 16, precision: 3, maxNum: 1}
+
+FLD_FR:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.hru", line: 16, start: 1, width: 16, precision: 3, maxNum: 1}
+
+RIP_FR:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.hru", line: 17, start: 1, width: 16, precision: 3, maxNum: 1}
+
+POT_TILE:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "[0-9]*.hru", line: 19, start: 1, width: 16, precision: 3, maxNum: 1}
+
+POT_VOLX:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "[0-9]*.hru", line: 20, start: 1, width: 16, precision: 3, maxNum: 1}
+
+POT_VOL:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "[0-9]*.hru", line: 21, start: 1, width: 16, precision: 3, maxNum: 1}
+
+POT_NSED:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "[0-9]*.hru", line: 22, start: 1, width: 16, precision: 3, maxNum: 1}
+
+POT_NO3L:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.hru", line: 23, start: 1, width: 16, precision: 3, maxNum: 1}
+
+DEP_IMP:
+  type: int
+  bounds: [0.0, 6000.0]
+  file: {name: "[0-9]*.hru", line: 24, start: 1, width: 16, precision: 0, maxNum: 1}
+
+EVPOT:
+  type: float
+  bounds: [0.0, 2.0]
+  file: {name: "[0-9]*.hru", line: 28, start: 1, width: 16, precision: 1, maxNum: 1}
+
+DIS_STREAM:
+  type: float
+  bounds: [0.0, 100000.0]
+  file: {name: "[0-9]*.hru", line: 29, start: 1, width: 16, precision: 1, maxNum: 1}
+
+CF:
+  type: float
+  bounds: [0.5, 1.0]
+  file: {name: "[0-9]*.hru", line: 30, start: 1, width: 16, precision: 1, maxNum: 1}
+
+CFH:
+  type: float
+  bounds: [0.5, 1.5]
+  file: {name: "[0-9]*.hru", line: 31, start: 1, width: 16, precision: 1, maxNum: 1}
+
+CFDEC:
+  type: float
+  bounds: [0.045, 0.065]
+  file: {name: "[0-9]*.hru", line: 32, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SED_CON:
+  type: float
+  bounds: [0.0, 5000.0]
+  file: {name: "[0-9]*.hru", line: 33, start: 1, width: 16, precision: 1, maxNum: 1}
+
+ORGN_CON:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "[0-9]*.hru", line: 34, start: 1, width: 16, precision: 1, maxNum: 1}
+
+ORGP_CON:
+  type: float
+  bounds: [0.0, 50.0]
+  file: {name: "[0-9]*.hru", line: 35, start: 1, width: 16, precision: 1, maxNum: 1}
+
+SOLN_CON:
+  type: float
+  bounds: [0.0, 10.0]
+  file: {name: "[0-9]*.hru", line: 36, start: 1, width: 16, precision: 1, maxNum: 1}
+
+SOLP_CON:
+  type: float
+  bounds: [0.0, 3.0]
+  file: {name: "[0-9]*.hru", line: 37, start: 1, width: 16, precision: 1, maxNum: 1}
+
+POT_SOLP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "[0-9]*.hru", line: 38, start: 1, width: 16, precision: 1, maxNum: 1}
+
+POT_K_HRU:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "[0-9]*.hru", line: 39, start: 1, width: 16, precision: 1, maxNum: 1}
+
+N_REDUC:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "[0-9]*.hru", line: 40, start: 1, width: 16, precision: 1, maxNum: 1}
+
+N_LAG:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "[0-9]*.hru", line: 41, start: 1, width: 16, precision: 1, maxNum: 1}
+
+N_LN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "[0-9]*.hru", line: 42, start: 1, width: 16, precision: 1, maxNum: 1}
+
+N_LNCO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "[0-9]*.hru", line: 43, start: 1, width: 16, precision: 1, maxNum: 1}
+
+SURLAG_HRU:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "[0-9]*.hru", line: 44, start: 1, width: 16, precision: 1, maxNum: 1}
+
+R2ADJ_HRU:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "[0-9]*.hru", line: 45, start: 1, width: 16, precision: 1, maxNum: 1}
+
+# ========== .gw parameters ==========
+SHALLST:
+  type: float
+  bounds: [0.0, 50000.0]
+  file: {name: "*.gw", line: 2, start: 1, width: 16, precision: 4, maxNum: 1}
+
+DEEPST:
+  type: float
+  bounds: [0.0, 50000.0]
+  file: {name: "*.gw", line: 3, start: 1, width: 16, precision: 4, maxNum: 1}
+
+GW_DELAY:
+  type: float
+  bounds: [0.0, 500.0]
+  file: {name: "*.gw", line: 4, start: 1, width: 16, precision: 4, maxNum: 1}
+
+ALPHA_BF:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.gw", line: 5, start: 1, width: 16, precision: 4, maxNum: 1}
+
+GWQMN:
+  type: float
+  bounds: [0.0, 50000.0]
+  file: {name: "*.gw", line: 6, start: 1, width: 16, precision: 4, maxNum: 1}
+
+GW_REVAP:
+  type: float
+  bounds: [0.02, 0.2]
+  file: {name: "*.gw", line: 7, start: 1, width: 16, precision: 4, maxNum: 1}
+
+REVAPMN:
+  type: float
+  bounds: [0.0, 500.0]
+  file: {name: "*.gw", line: 8, start: 1, width: 16, precision: 4, maxNum: 1}
+
+RCHRG_DP:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.gw", line: 9, start: 1, width: 16, precision: 4, maxNum: 1}
+
+GWHT:
+  type: float
+  bounds: [0.0, 25.0]
+  file: {name: "*.gw", line: 10, start: 1, width: 16, precision: 4, maxNum: 1}
+
+GW_SPYLD:
+  type: float
+  bounds: [0.0, 0.4]
+  file: {name: "*.gw", line: 11, start: 1, width: 16, precision: 4, maxNum: 1}
+
+SHALLST_N:
+  type: float
+  bounds: [0.0, 1000.0]
+  file: {name: "*.gw", line: 12, start: 1, width: 16, precision: 4, maxNum: 1}
+
+GWSOLP:
+  type: float
+  bounds: [0.0, 1000.0]
+  file: {name: "*.gw", line: 13, start: 1, width: 16, precision: 4, maxNum: 1}
+
+HLIFE_NGW_GW:
+  type: float
+  bounds: [0.0, 200.0]
+  file: {name: "*.gw", line: 14, start: 1, width: 16, precision: 4, maxNum: 1}
+
+LAT_ORGN:
+  type: float
+  bounds: [0.0, 200.0]
+  file: {name: "*.gw", line: 15, start: 1, width: 16, precision: 4, maxNum: 1}
+
+LAT_ORGP:
+  type: float
+  bounds: [0.0, 200.0]
+  file: {name: "*.gw", line: 16, start: 1, width: 16, precision: 4, maxNum: 1}
+
+ALPHA_BF_D:
+  type: float
+  bounds: [0.0, 0.0001]
+  file: {name: "*.gw", line: 17, start: 1, width: 16, precision: 4, maxNum: 1}
+
+# ========== .sdr parameters ==========
+RE_SDR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sdr", line: 2, start: 1, width: 10, precision: 2, maxNum: 1}
+
+SDRAIN_SDR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sdr", line: 3, start: 1, width: 10, precision: 2, maxNum: 1}
+
+DRAIN_CO_SDR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sdr", line: 4, start: 1, width: 10, precision: 2, maxNum: 1}
+
+PC_SDR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sdr", line: 5, start: 1, width: 10, precision: 2, maxNum: 1}
+
+LATKSATF_SDR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sdr", line: 6, start: 1, width: 10, precision: 2, maxNum: 1}
+
+# ========== .sep parameters ==========
+ISEP_TYP:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 3, start: 1, width: 13, precision: 0, maxNum: 1}
+
+ISEP_IYR:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 4, start: 1, width: 13, precision: 0, maxNum: 1}
+
+ISEP_OPT:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 5, start: 1, width: 13, precision: 0, maxNum: 1}
+
+SEP_CAP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 6, start: 1, width: 13, precision: 1, maxNum: 1}
+
+BZ_AREA:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 7, start: 1, width: 13, precision: 3, maxNum: 1}
+
+ISEP_TFAIL:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 8, start: 1, width: 13, precision: 0, maxNum: 1}
+
+BZ_Z:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 9, start: 1, width: 13, precision: 3, maxNum: 1}
+
+BZ_THK:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 10, start: 1, width: 13, precision: 3, maxNum: 1}
+
+SEP_STRM_DIST:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 11, start: 1, width: 13, precision: 3, maxNum: 1}
+
+SEP_DEN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 12, start: 1, width: 13, precision: 3, maxNum: 1}
+
+BIO_BD:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 13, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_BOD_DC:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 14, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_BOD_CONV:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 15, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_FC1:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 16, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_FC2:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 17, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_FECAL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 18, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_PLQ:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 19, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_MRT:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 20, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_RSP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 21, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_SLG1:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 22, start: 1, width: 13, precision: 5, maxNum: 1}
+
+COEFF_SLG2:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 23, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_NITR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 24, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_DENITR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 25, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_PDISTRB:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 26, start: 1, width: 13, precision: 5, maxNum: 1}
+
+COEFF_PSORPMAX:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 27, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_SOLPSLP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 28, start: 1, width: 13, precision: 3, maxNum: 1}
+
+COEFF_SOLPINTC:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.sep", line: 29, start: 1, width: 13, precision: 3, maxNum: 1}
+
+# ========== .sol parameters ==========
+SOL_ZMX:
+  type: float
+  bounds: [0.0, 3500.0]
+  file: {name: "*.sol", line: 4, start: 29, width: 8, precision: 2, maxNum: 1}
+
+ANION_EXCL_SOL:
+  type: float
+  bounds: [0.01, 1.0]
+  file: {name: "*.sol", line: 5, start: 51, width: 6, precision: 3, maxNum: 1}
+
+SOL_CRK:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.sol", line: 6, start: 33, width: 6, precision: 3, maxNum: 1}
+
+SOL_Z:
+  type: float
+  bounds: [0.0, 3500.0]
+  file: {name: "*.sol", line: 8, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_BD:
+  type: float
+  bounds: [0.9, 2.5]
+  file: {name: "*.sol", line: 9, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_AWC:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.sol", line: 10, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_K:
+  type: float
+  bounds: [0.0, 2000.0]
+  file: {name: "*.sol", line: 11, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_CBN:
+  type: float
+  bounds: [0.05, 10.0]
+  file: {name: "*.sol", line: 12, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_CLAY:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "*.sol", line: 13, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_SILT:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "*.sol", line: 14, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_SAND:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "*.sol", line: 15, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_ROCK:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "*.sol", line: 16, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_ALB:
+  type: float
+  bounds: [0.0, 0.25]
+  file: {name: "*.sol", line: 17, start: 28, width: 12, precision: 2, maxNum: 10}
+
+USLE_K:
+  type: float
+  bounds: [0.0, 0.65]
+  file: {name: "*.sol", line: 18, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_EC:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "*.sol", line: 19, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_CAL:
+  type: float
+  bounds: [-.inf, .inf]
+  file: {name: "*.sol", line: 20, start: 28, width: 12, precision: 2, maxNum: 10}
+
+SOL_PH:
+  type: float
+  bounds: [-.inf, .inf]
+  file: {name: "*.sol", line: 21, start: 28, width: 12, precision: 2, maxNum: 10}
+
+# ========== .rte parameters ==========
+CHW2:
+  type: float
+  bounds: [0.0, 1000.0]
+  file: {name: "[0-9]*.rte", line: 2, start: 1, width: 14, precision: 3, maxNum: 1}
+
+CHD:
+  type: float
+  bounds: [0.0, 30.0]
+  file: {name: "[0-9]*.rte", line: 3, start: 1, width: 14, precision: 3, maxNum: 1}
+
+CH_S2:
+  type: float
+  bounds: [0.001, 10.0]
+  file: {name: "[0-9]*.rte", line: 4, start: 1, width: 14, precision: 5, maxNum: 1}
+
+CH_L2:
+  type: float
+  bounds: [0.05, 500.0]
+  file: {name: "[0-9]*.rte", line: 5, start: 1, width: 14, precision: 3, maxNum: 1}
+
+CH_N2:
+  type: float
+  bounds: [0.01, 0.3]
+  file: {name: "[0-9]*.rte", line: 6, start: 1, width: 14, precision: 3, maxNum: 1}
+
+CH_K2:
+  type: float
+  bounds: [0.01, 500.0]
+  file: {name: "[0-9]*.rte", line: 7, start: 1, width: 14, precision: 3, maxNum: 1}
+
+CH_COV1:
+  type: float
+  bounds: [0.0, 20.0]
+  file: {name: "[0-9]*.rte", line: 8, start: 1, width: 14, precision: 3, maxNum: 1}
+
+CH_COV2:
+  type: float
+  bounds: [0.0, 20.0]
+  file: {name: "[0-9]*.rte", line: 9, start: 1, width: 14, precision: 3, maxNum: 1}
+
+CH_WDR:
+  type: float
+  bounds: [0.0, 10000.0]
+  file: {name: "[0-9]*.rte", line: 10, start: 1, width: 14, precision: 3, maxNum: 1}
+
+ALPHA_BNK:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.rte", line: 11, start: 1, width: 14, precision: 3, maxNum: 1}
+
+ICANAL:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.rte", line: 12, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_ONCO_RTE:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "[0-9]*.rte", line: 13, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_OPCO_RTE:
+  type: float
+  bounds: [0.0, 100.0]
+  file: {name: "[0-9]*.rte", line: 14, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_SIDE:
+  type: float
+  bounds: [0.0, 5.0]
+  file: {name: "[0-9]*.rte", line: 15, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_BNK_BD:
+  type: float
+  bounds: [1.1, 1.9]
+  file: {name: "[0-9]*.rte", line: 16, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_BED_BD:
+  type: float
+  bounds: [1.1, 1.9]
+  file: {name: "[0-9]*.rte", line: 17, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_BNK_KD:
+  type: float
+  bounds: [0.001, 3.75]
+  file: {name: "[0-9]*.rte", line: 18, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_BED_KD:
+  type: float
+  bounds: [0.001, 3.75]
+  file: {name: "[0-9]*.rte", line: 19, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_BNK_D50:
+  type: float
+  bounds: [1.0, 10000.0]
+  file: {name: "[0-9]*.rte", line: 20, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_BED_D50:
+  type: float
+  bounds: [1.0, 10000.0]
+  file: {name: "[0-9]*.rte", line: 21, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_BNK_TC:
+  type: float
+  bounds: [0.0, 400.0]
+  file: {name: "[0-9]*.rte", line: 22, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_BED_TC:
+  type: float
+  bounds: [0.0, 400.0]
+  file: {name: "[0-9]*.rte", line: 23, start: 1, width: 14, precision: 2, maxNum: 1}
+
+CH_ERODMO:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "[0-9]*.rte", line: 24, start: 1, width: 6, precision: 2, maxNum: 1}
+
+CH_EQN:
+  type: int
+  bounds: [0.0, 4.0]
+  file: {name: "[0-9]*.rte", line: 25, start: 1, width: 14, precision: 0, maxNum: 1}
+
+# ========== .mgt parameters ==========
+NMGT:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 2, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IGRO:
+  type: int
+  bounds: [0.0, 1.0]
+  file: {name: "*.mgt", line: 4, start: 1, width: 16, precision: 0, maxNum: 1}
+
+PLANT_ID:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 5, start: 1, width: 16, precision: 0, maxNum: 1}
+
+LAI_INIT:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 6, start: 1, width: 16, precision: 2, maxNum: 1}
+
+BIO_INIT:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 7, start: 1, width: 16, precision: 2, maxNum: 1}
+
+PHU_PLT:
+  type: float
+  bounds: [0.0, 3500.0]
+  file: {name: "*.mgt", line: 8, start: 1, width: 16, precision: 2, maxNum: 1}
+
+BIOMIX:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.mgt", line: 10, start: 1, width: 16, precision: 2, maxNum: 1}
+
+CN2:
+  type: float
+  bounds: [35.0, 98.0]
+  file: {name: "*.mgt", line: 11, start: 1, width: 16, precision: 2, maxNum: 1}
+
+USLE_P:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.mgt", line: 12, start: 1, width: 16, precision: 2, maxNum: 1}
+
+BIO_MIN:
+  type: float
+  bounds: [0.0, 5000.0]
+  file: {name: "*.mgt", line: 13, start: 1, width: 16, precision: 2, maxNum: 1}
+
+FILTERW:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 14, start: 1, width: 16, precision: 3, maxNum: 1}
+
+IURBAN:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 16, start: 1, width: 16, precision: 0, maxNum: 1}
+
+URBLU:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 17, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IRRSC:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 19, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IRRNO:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 20, start: 1, width: 16, precision: 0, maxNum: 1}
+
+FLOWMIN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 21, start: 1, width: 16, precision: 3, maxNum: 1}
+
+DIVMAX:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 22, start: 1, width: 16, precision: 3, maxNum: 1}
+
+FLOWFR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 23, start: 1, width: 16, precision: 3, maxNum: 1}
+
+DDRAIN_MGT:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 25, start: 1, width: 16, precision: 3, maxNum: 1}
+
+TDRAIN_MGT:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 26, start: 1, width: 16, precision: 3, maxNum: 1}
+
+GDRAIN_MGT:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 27, start: 1, width: 16, precision: 3, maxNum: 1}
+
+NROT:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.mgt", line: 29, start: 1, width: 16, precision: 0, maxNum: 1}
+
+# ========== .bsn parameters (basins.bsn) ==========
+SFTMP:
+  type: float
+  bounds: [-20.0, 20.0]
+  file: {name: "basins.bsn", line: 4, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SMTMP:
+  type: float
+  bounds: [-20.0, 20.0]
+  file: {name: "basins.bsn", line: 5, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SMFMX:
+  type: float
+  bounds: [0.0, 20.0]
+  file: {name: "basins.bsn", line: 6, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SMFMN:
+  type: float
+  bounds: [0.0, 20.0]
+  file: {name: "basins.bsn", line: 7, start: 1, width: 16, precision: 3, maxNum: 1}
+
+TIMP:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "basins.bsn", line: 8, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SNOCOVMX:
+  type: float
+  bounds: [0.0, 15.0]
+  file: {name: "basins.bsn", line: 9, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SNO50COV:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "basins.bsn", line: 10, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ESCO_BSN:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "basins.bsn", line: 13, start: 1, width: 16, precision: 3, maxNum: 1}
+
+EPCO_BSN:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "basins.bsn", line: 14, start: 1, width: 16, precision: 3, maxNum: 1}
+
+EVLAI:
+  type: float
+  bounds: [-.inf, .inf]
+  file: {name: "basins.bsn", line: 15, start: 1, width: 16, precision: 3, maxNum: 1}
+
+FFCB:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 16, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SURLAG_BSN:
+  type: float
+  bounds: [0.05, 24.0]
+  file: {name: "basins.bsn", line: 20, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ADJ_PKR:
+  type: float
+  bounds: [0.05, 2.0]
+  file: {name: "basins.bsn", line: 21, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PRF_BSN:
+  type: float
+  bounds: [0.0, 2.0]
+  file: {name: "basins.bsn", line: 22, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SPCON:
+  type: float
+  bounds: [0.0001, 0.01]
+  file: {name: "basins.bsn", line: 23, start: 1, width: 16, precision: 4, maxNum: 1}
+
+SPEXP:
+  type: float
+  bounds: [1.0, 1.5]
+  file: {name: "basins.bsn", line: 24, start: 1, width: 16, precision: 4, maxNum: 1}
+
+RCN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 26, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CMN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 27, start: 1, width: 16, precision: 5, maxNum: 1}
+
+N_UPDIS:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 28, start: 1, width: 16, precision: 3, maxNum: 1}
+
+P_UPDIS:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 29, start: 1, width: 16, precision: 3, maxNum: 1}
+
+NPERCO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 30, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PPERCO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 31, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PHOSKD:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 32, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PSP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 33, start: 1, width: 16, precision: 3, maxNum: 1}
+
+RSDCO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 34, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PERCOP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 36, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ISUBWQ:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 38, start: 1, width: 16, precision: 0, maxNum: 1}
+
+WDPQ:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 40, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WGPQ:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 41, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDLPQ:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 42, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WGLPQ:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 43, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDPS:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 44, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WGPS:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 45, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDLPS:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 46, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WGLPS:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 47, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BACTKDQ:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 48, start: 1, width: 16, precision: 3, maxNum: 1}
+
+THBACT:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 49, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WOF_P:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 50, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WOF_LP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 51, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDPF:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 52, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WGPF:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 53, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDLPF:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 54, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WGLPF:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 55, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ISED_DET:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 56, start: 1, width: 16, precision: 0, maxNum: 1}
+
+MSK_CO1:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "basins.bsn", line: 59, start: 1, width: 16, precision: 3, maxNum: 1}
+
+MSK_CO2:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "basins.bsn", line: 60, start: 1, width: 16, precision: 3, maxNum: 1}
+
+MSK_X:
+  type: float
+  bounds: [0.0, 0.3]
+  file: {name: "basins.bsn", line: 61, start: 1, width: 16, precision: 3, maxNum: 1}
+
+TRNSRCH:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 65, start: 1, width: 16, precision: 3, maxNum: 1}
+
+EVRCH:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 66, start: 1, width: 16, precision: 3, maxNum: 1}
+
+IRTPEST:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 67, start: 1, width: 16, precision: 0, maxNum: 1}
+
+ICN:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 68, start: 1, width: 16, precision: 0, maxNum: 1}
+
+CNCOEF:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 69, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CDN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 70, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SDNCO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 71, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BACT_SWF:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 72, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BACTMX:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 73, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BACTMINLP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 74, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BACTMINP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 75, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDLPRCH:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 76, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDPRCH:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 77, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDLPRES:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 78, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WDPRES:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 79, start: 1, width: 16, precision: 3, maxNum: 1}
+
+TB_ADJ:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 80, start: 1, width: 16, precision: 3, maxNum: 1}
+
+DEPIMP_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 81, start: 1, width: 16, precision: 3, maxNum: 1}
+
+DDRAIN_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 82, start: 1, width: 16, precision: 3, maxNum: 1}
+
+TDRAIN_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 83, start: 1, width: 16, precision: 3, maxNum: 1}
+
+GDRAIN_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 84, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CN_FROZ:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 85, start: 1, width: 16, precision: 6, maxNum: 1}
+
+DORM_HR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 86, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SMXCO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 87, start: 1, width: 16, precision: 3, maxNum: 1}
+
+FIXCO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 88, start: 1, width: 16, precision: 3, maxNum: 1}
+
+NFIXMX:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 89, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ANION_EXCL_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 90, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CH_ONCO_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 91, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CH_OPCO_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 92, start: 1, width: 16, precision: 3, maxNum: 1}
+
+HLIFE_NGW_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 93, start: 1, width: 16, precision: 3, maxNum: 1}
+
+RCN_SUB_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 94, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BC1_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 95, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BC2_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 96, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BC3_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 97, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BC4_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 98, start: 1, width: 16, precision: 3, maxNum: 1}
+
+DECR_MIN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 99, start: 1, width: 16, precision: 3, maxNum: 1}
+
+ICFAC:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 100, start: 1, width: 16, precision: 3, maxNum: 1}
+
+RSD_COVCO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 101, start: 1, width: 16, precision: 3, maxNum: 1}
+
+VCRIT:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 102, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CSWAT:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 103, start: 1, width: 16, precision: 0, maxNum: 1}
+
+RES_STLR_CO:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 104, start: 1, width: 16, precision: 3, maxNum: 1}
+
+BFLO_DIST:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "basins.bsn", line: 105, start: 1, width: 16, precision: 3, maxNum: 1}
+
+IUH:
+  type: int
+  bounds: [1.0, 2.0]
+  file: {name: "basins.bsn", line: 106, start: 1, width: 16, precision: 0, maxNum: 1}
+
+UHALPHA:
+  type: float
+  bounds: [0.5, 10.0]
+  file: {name: "basins.bsn", line: 107, start: 1, width: 16, precision: 3, maxNum: 1}
+
+EROS_SPL:
+  type: float
+  bounds: [0.9, 3.1]
+  file: {name: "basins.bsn", line: 111, start: 1, width: 16, precision: 3, maxNum: 1}
+
+RILL_MULT:
+  type: float
+  bounds: [0.5, 2.0]
+  file: {name: "basins.bsn", line: 112, start: 1, width: 16, precision: 3, maxNum: 1}
+
+EROS_EXPO:
+  type: float
+  bounds: [1.5, 3.0]
+  file: {name: "basins.bsn", line: 113, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SUBD_CHSED:
+  type: float
+  bounds: [0.0, 2.0]
+  file: {name: "basins.bsn", line: 114, start: 1, width: 16, precision: 3, maxNum: 1}
+
+C_FACTOR:
+  type: float
+  bounds: [0.001, 0.45]
+  file: {name: "basins.bsn", line: 115, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CH_D50:
+  type: float
+  bounds: [10.0, 100.0]
+  file: {name: "basins.bsn", line: 116, start: 1, width: 16, precision: 1, maxNum: 1}
+
+SIG_G:
+  type: float
+  bounds: [1.0, 5.0]
+  file: {name: "basins.bsn", line: 117, start: 1, width: 16, precision: 3, maxNum: 1}
+
+RE_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 118, start: 1, width: 16, precision: 2, maxNum: 1}
+
+SDRAIN_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 119, start: 1, width: 16, precision: 2, maxNum: 1}
+
+DRAIN_CO_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 120, start: 1, width: 16, precision: 2, maxNum: 1}
+
+PC_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 121, start: 1, width: 16, precision: 3, maxNum: 1}
+
+LATKSATF_BSN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 122, start: 1, width: 16, precision: 2, maxNum: 1}
+
+ITDRN:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 123, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IWTDN:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 124, start: 1, width: 16, precision: 0, maxNum: 1}
+
+SOL_P_MODEL:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 125, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IABSTR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 126, start: 1, width: 16, precision: 3, maxNum: 1}
+
+IATMODEP:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 127, start: 1, width: 16, precision: 0, maxNum: 1}
+
+R2ADJ_BSN:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 128, start: 1, width: 16, precision: 0, maxNum: 1}
+
+SSTMAXD_BSN:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 129, start: 1, width: 16, precision: 0, maxNum: 1}
+
+ISMAX:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 130, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IROUTUNIT:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "basins.bsn", line: 131, start: 1, width: 16, precision: 0, maxNum: 1}
+
+# ========== .sub parameters ==========
+PLAPS:
+  type: float
+  bounds: [-1000.0, 1000.0]
+  file: {name: "[0-9]*.sub", line: 21, start: 1, width: 16, precision: 3, maxNum: 1}
+
+TLAPS:
+  type: float
+  bounds: [-10.0, 10.0]
+  file: {name: "[0-9]*.sub", line: 22, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SNO_SUB:
+  type: float
+  bounds: [0.0, 150.0]
+  file: {name: "[0-9]*.sub", line: 23, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CH_L1:
+  type: float
+  bounds: [0.05, 200.0]
+  file: {name: "[0-9]*.sub", line: 25, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CH_S1:
+  type: float
+  bounds: [0.0001, 10.0]
+  file: {name: "[0-9]*.sub", line: 26, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CH_W1:
+  type: float
+  bounds: [1.0, 1000.0]
+  file: {name: "[0-9]*.sub", line: 27, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CH_K1:
+  type: float
+  bounds: [0.0, 300.0]
+  file: {name: "[0-9]*.sub", line: 28, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CH_N1:
+  type: float
+  bounds: [0.01, 0.3]
+  file: {name: "[0-9]*.sub", line: 29, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CO2:
+  type: float
+  bounds: [0.0, 800.0]
+  file: {name: "[0-9]*.sub", line: 35, start: 1, width: 16, precision: 3, maxNum: 1}
+
+# ========== .pnd parameters ==========
+PND_FR:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.pnd", line: 3, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_PSA:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 4, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_PVOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 5, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_ESA:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 6, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_EVOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 7, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_VOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 8, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_SED:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 9, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_NSED:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 10, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_K:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 11, start: 1, width: 16, precision: 3, maxNum: 1}
+
+IFLOD1:
+  type: int
+  bounds: [0.0, 12.0]
+  file: {name: "*.pnd", line: 12, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IFLOD2:
+  type: int
+  bounds: [0.0, 12.0]
+  file: {name: "*.pnd", line: 13, start: 1, width: 16, precision: 0, maxNum: 1}
+
+NDTARG:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 14, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PSETLP1:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 15, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PSETLP2:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 16, start: 1, width: 16, precision: 3, maxNum: 1}
+
+NSETLP1:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 17, start: 1, width: 16, precision: 3, maxNum: 1}
+
+NSETLP2:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 18, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CHLAP:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.pnd", line: 19, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SECCIP:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.pnd", line: 20, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_NO3:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 21, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_SOLP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 22, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_ORGN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 23, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_ORGP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 24, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PND_D50:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 25, start: 1, width: 16, precision: 3, maxNum: 1}
+
+IPND1:
+  type: int
+  bounds: [0.0, 12.0]
+  file: {name: "*.pnd", line: 26, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IPND2:
+  type: int
+  bounds: [0.0, 12.0]
+  file: {name: "*.pnd", line: 27, start: 1, width: 16, precision: 0, maxNum: 1}
+
+WET_FR:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.pnd", line: 29, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_NSA:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 30, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_NVOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 31, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_MXSA:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 32, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_MXVOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 33, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_VOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 34, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_SED:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 35, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_NSED:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 36, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_K:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 37, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PSETLW1:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 38, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PSETLW2:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 39, start: 1, width: 16, precision: 3, maxNum: 1}
+
+NSETLW1:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 40, start: 1, width: 16, precision: 3, maxNum: 1}
+
+NSETLW2:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 41, start: 1, width: 16, precision: 3, maxNum: 1}
+
+CHLAW:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.pnd", line: 42, start: 1, width: 16, precision: 3, maxNum: 1}
+
+SECCIW:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.pnd", line: 43, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_NO3:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 44, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_SOLP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 45, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_ORGN:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 46, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WET_ORGP:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 47, start: 1, width: 16, precision: 3, maxNum: 1}
+
+PNDEVCOEFF:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 48, start: 1, width: 16, precision: 3, maxNum: 1}
+
+WETEVCOEFF:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.pnd", line: 49, start: 1, width: 16, precision: 3, maxNum: 1}
+
+# ========== .res parameters ==========
+MORES:
+  type: int
+  bounds: [0.0, 12.0]
+  file: {name: "*.res", line: 3, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IYRES:
+  type: int
+  bounds: [1.0, .inf]
+  file: {name: "*.res", line: 4, start: 1, width: 16, precision: 0, maxNum: 1}
+
+RES_ESA:
+  type: int
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 5, start: 1, width: 16, precision: 0, maxNum: 1}
+
+RES_EVOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 6, start: 1, width: 16, precision: 1, maxNum: 1}
+
+RES_PSA:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 7, start: 1, width: 16, precision: 1, maxNum: 1}
+
+RES_PVOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 8, start: 1, width: 16, precision: 1, maxNum: 1}
+
+RES_VOL:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 9, start: 1, width: 16, precision: 1, maxNum: 1}
+
+RES_SED:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 10, start: 1, width: 16, precision: 1, maxNum: 1}
+
+RES_NSED:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 11, start: 1, width: 16, precision: 1, maxNum: 1}
+
+RES_D50:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 12, start: 1, width: 16, precision: 1, maxNum: 1}
+
+RES_K:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 13, start: 1, width: 16, precision: 1, maxNum: 1}
+
+IRESCO:
+  type: int
+  bounds: [0.0, 3.0]
+  file: {name: "*.res", line: 14, start: 1, width: 16, precision: 0, maxNum: 1}
+
+RES_RR:
+  type: float
+  bounds: [0.0, .inf]
+  file: {name: "*.res", line: 23, start: 1, width: 16, precision: 1, maxNum: 1}
+
+IFLOD1R:
+  type: int
+  bounds: [1.0, 12.0]
+  file: {name: "*.res", line: 25, start: 1, width: 16, precision: 0, maxNum: 1}
+
+IFLOD2R:
+  type: int
+  bounds: [1.0, 12.0]
+  file: {name: "*.res", line: 26, start: 1, width: 16, precision: 0, maxNum: 1}
+
+NDTARGR:
+  type: int
+  bounds: [1.0, .inf]
+  file: {name: "*.res", line: 27, start: 1, width: 16, precision: 0, maxNum: 1}
+
+WURTNF:
+  type: int
+  bounds: [1.0, 1.0]
+  file: {name: "*.res", line: 37, start: 1, width: 16, precision: 0, maxNum: 1}
+
+EVRSV:
+  type: float
+  bounds: [0.0, 1.0]
+  file: {name: "*.res", line: 38, start: 1, width: 16, precision: 1, maxNum: 1}
+
+OFLOWMN_FPS:
+  type: int
+  bounds: [0.0, 1.0]
+  file: {name: "*.res", line: 39, start: 1, width: 16, precision: 0, maxNum: 1}
+
+STARG_FPS:
+  type: int
+  bounds: [0.0, 1.0]
+  file: {name: "*.res", line: 40, start: 1, width: 16, precision: 0, maxNum: 1}

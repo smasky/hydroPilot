@@ -1,0 +1,53 @@
+# SWAT Daily Test — Scenario A: design only, no filter, no transformer
+#
+# Three parameters calibrated globally across all HRU files.
+# Uses NSE as the single objective function.
+# Test project: E:\DJBasin\TxtInOutFSB
+
+version: "swat"
+
+basic:
+  projectPath: "E:\\DJBasin\\TxtInOutFSB"
+  workPath: "./work"
+  command: "swat.exe"
+
+parameters:
+  design:
+    - name: CN2
+      bounds: [35, 98]
+    - name: ALPHA_BF
+      bounds: [0, 1]
+    - name: GW_DELAY
+      bounds: [0, 500]
+
+series:
+  - id: flow
+    desc: "Daily streamflow at outlet"
+    sim:
+      file: output.rch
+      subbasin: 33
+      period: [2010, 2015]
+      timestep: daily
+      colSpan: [50, 61]
+    obs:
+      file: obs_flow.txt
+      rowRanges:
+        - [1, 2191]
+      colSpan: [1, 12]
+
+functions:
+  - name: NSE
+    kind: builtin
+
+derived:
+  - id: nse_flow
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+
+objectives:
+  items:
+    - id: obj_nse
+      desc: "Maximize NSE"
+      ref: nse_flow
+      sense: max

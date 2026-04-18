@@ -1,0 +1,53 @@
+# SWAT Monthly Test — subbasin 62, period 2019-2021
+#
+# Three parameters calibrated globally.
+# Uses NSE as the single objective function.
+# Test project: E:\BMPs\TxtInOut
+
+version: "swat"
+
+basic:
+  projectPath: "E:\\BMPs\\TxtInOut"
+  workPath: "./work"
+  command: "swat.exe"
+
+parameters:
+  design:
+    - name: CN2
+      bounds: [35, 98]
+    - name: ALPHA_BF
+      bounds: [0, 1]
+    - name: GW_DELAY
+      bounds: [0, 500]
+
+series:
+  - id: flow
+    desc: "Monthly streamflow at outlet"
+    sim:
+      file: output.rch
+      subbasin: 62
+      period: [2019, 2021]
+      timestep: monthly
+      colSpan: [50, 61]
+    obs:
+      file: obs_flow_monthly.txt
+      rowRanges:
+        - [1, 36]
+      colSpan: [1, 12]
+
+functions:
+  - name: NSE
+    kind: builtin
+
+derived:
+  - id: nse_flow
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+
+objectives:
+  items:
+    - id: obj_nse
+      desc: "Maximize NSE"
+      ref: nse_flow
+      sense: max
