@@ -1,0 +1,88 @@
+version: general
+basic:
+  projectPath: E:\DJBasin\TxtInOutFSB
+  workPath: ./work
+  command: swat.exe
+parameters:
+  design:
+    - name: CN2
+      type: float
+      bounds: [35, 98]
+    - name: ALPHA_BF
+      type: float
+      bounds: [0, 1]
+    - name: GW_DELAY
+      type: float
+      bounds: [0, 500]
+  physical:
+    - name: CN2
+      type: float
+      bounds: [35, 98]
+      mode: v
+      writerType: fixed_width
+      file:
+        name: '*.mgt'
+        line: 11
+        start: 1
+        width: 16
+        precision: 2
+        maxNum: 1
+    - name: ALPHA_BF
+      type: float
+      bounds: [0, 1]
+      mode: v
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 5
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+    - name: GW_DELAY
+      type: float
+      bounds: [0, 500]
+      mode: v
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 4
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+  hardBound: true
+series:
+  - id: flow
+    desc: Daily streamflow at outlet
+    sim:
+      file: output.rch
+      readerType: text
+      colSpan: [52, 61]
+      rowRanges:
+        - [24165, 96435, 33]
+    obs:
+      file: obs_flow.txt
+      rowRanges:
+        - [1, 2191]
+      colNum: 1
+      readerType: text
+    size: 2191
+functions:
+  - name: NSE
+    kind: builtin
+derived:
+  - id: nse_flow
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+objectives:
+  items:
+    - id: obj_nse
+      desc: Maximize NSE
+      ref: nse_flow
+      sense: max
+reporter:
+  flushInterval: 50
+  holdingPenLimit: 20
+  series: []

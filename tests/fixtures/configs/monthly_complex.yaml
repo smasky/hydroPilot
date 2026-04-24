@@ -1,0 +1,140 @@
+# SWAT Monthly Complex Test — Scenario E: transformer + filter + multi-objective + diagnostics
+#
+# 4 design params -> 6 physical params via external transformer
+# Mixed filter: CN2 by land_use, ESCO by subbasin range
+# Two series: flow + TN from output.rch subbasin 62
+# Multi-objective: NSE_flow + NSE_TN
+# Diagnostics: KGE, RMSE, annual TN load (external function)
+# Test project: E:\BMPs\TxtInOut (monthly, 2019-2021, 62 subbasins)
+
+version: "swat"
+
+basic:
+  projectPath: "E:\\BMPs\\TxtInOut"
+  workPath: "../../../work"
+  command: "swat.exe"
+
+parameters:
+  design:
+    - name: CN2_factor
+      bounds: [0.8, 1.2]
+    - name: ESCO_val
+      bounds: [0.5, 0.95]
+    - name: GW_DELAY_val
+      bounds: [10, 500]
+    - name: SURLAG_val
+      bounds: [0.5, 24]
+
+  physical:
+    - name: CN2
+      mode: r
+      filter:
+        land_use: AGRL
+    - name: CN2
+      mode: r
+      filter:
+        land_use: URHD
+    - name: ESCO_HRU
+      mode: v
+      filter:
+        subbasin: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+    - name: ESCO_HRU
+      mode: v
+      filter:
+        subbasin: [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62]
+    - name: GW_DELAY
+      mode: v
+    - name: SURLAG_BSN
+      mode: v
+
+  transformer: "monthly_transform"
+
+series:
+  - id: flow
+    desc: "Monthly streamflow at outlet"
+    sim:
+      file: output.rch
+      id: 62
+      period: [2019, 2021]
+      timestep: monthly
+      colSpan: [51, 61]
+    obs:
+      file: "../../../examples/obs_flow_monthly.txt"
+      rowRanges:
+        - [1, 36]
+      colSpan: [1, 12]
+
+  - id: tn
+    desc: "Monthly total nitrogen at outlet"
+    sim:
+      file: output.rch
+      id: 62
+      period: [2019, 2021]
+      timestep: monthly
+      colSpan: [544, 553]
+    obs:
+      file: "../../../examples/obs_tn_monthly.txt"
+      rowRanges:
+        - [1, 36]
+      colSpan: [1, 12]
+
+functions:
+  - name: NSE
+    kind: builtin
+  - name: KGE
+    kind: builtin
+  - name: RMSE
+    kind: builtin
+  - name: monthly_transform
+    kind: external
+    file: "../../../examples/monthly_transform.py"
+    args: [X]
+  - name: calc_annual_tn_load
+    kind: external
+    file: "../../../examples/calc_tn_load.py"
+    args: [tn_sim]
+
+derived:
+  - id: nse_flow
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+  - id: nse_tn
+    call:
+      func: NSE
+      args: [tn.sim, tn.obs]
+  - id: kge_flow
+    call:
+      func: KGE
+      args: [flow.sim, flow.obs]
+  - id: rmse_flow
+    call:
+      func: RMSE
+      args: [flow.sim, flow.obs]
+  - id: annual_tn
+    call:
+      func: calc_annual_tn_load
+      args: [tn.sim]
+
+objectives:
+  items:
+    - id: obj_nse_flow
+      desc: "Maximize NSE for flow"
+      ref: nse_flow
+      sense: max
+    - id: obj_nse_tn
+      desc: "Maximize NSE for TN"
+      ref: nse_tn
+      sense: max
+
+diagnostics:
+  items:
+    - id: diag_kge
+      name: "KGE flow"
+      ref: kge_flow
+    - id: diag_rmse
+      name: "RMSE flow"
+      ref: rmse_flow
+    - id: diag_tn_load
+      name: "Annual TN load"
+      ref: annual_tn

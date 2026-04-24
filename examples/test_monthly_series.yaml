@@ -23,10 +23,10 @@ series:
     desc: "Monthly streamflow with month period"
     sim:
       file: output.rch
-      subbasin: 62
+      variable: FLOW_OUT
+      id: 62
       period: [2019-02, 2021-11]
       timestep: monthly
-      colSpan: [50, 61]
     obs:
       file: obs_flow_monthly.txt
       rowRanges:
@@ -37,10 +37,10 @@ series:
     desc: "Monthly streamflow with date period"
     sim:
       file: output.rch
-      subbasin: 62
+      variable: FLOW_OUT
+      id: 62
       period: [2019-02-03, 2021-11-01]
       timestep: monthly
-      colSpan: [50, 61]
     obs:
       file: obs_flow_monthly.txt
       rowRanges:

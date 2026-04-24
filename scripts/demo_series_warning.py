@@ -2,9 +2,10 @@ import os
 import sys
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+ROOT = os.path.join(os.path.dirname(__file__), "..", "src")
+sys.path.insert(0, ROOT)
 
-from hydro_pilot.sim_model import SimModel
+from hydro_pilot import SimModel
 
 CFG_PATH = os.path.join(os.path.dirname(__file__), "..", "examples", "test_monthly_series_warning.yaml")
 

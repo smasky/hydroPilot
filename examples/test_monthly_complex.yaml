@@ -54,7 +54,7 @@ series:
     desc: "Monthly streamflow at outlet"
     sim:
       file: output.rch
-      subbasin: 62
+      id: 62
       period: [2019, 2021]
       timestep: monthly
       colSpan: [51, 61]
@@ -68,7 +68,7 @@ series:
     desc: "Monthly total nitrogen at outlet"
     sim:
       file: output.rch
-      subbasin: 62
+      id: 62
       period: [2019, 2021]
       timestep: monthly
       colSpan: [544, 553]

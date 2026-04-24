@@ -21,7 +21,7 @@ series:
     desc: "Monthly streamflow"
     sim:
       file: output.rch
-      subbasin: 62
+      id: 62
       period: [2019-02, 2021-11]
       timestep: monthly
       colSpan: [50, 61]

@@ -25,15 +25,15 @@ series:
     desc: "Daily streamflow at outlet"
     sim:
       file: output.rch
-      subbasin: 33
+      id: 33
+      variable: FLOW_OUT
       period: [2010, 2015]
-      timestep: daily
-      colSpan: [50, 61]
+      
     obs:
       file: obs_flow.txt
       rowRanges:
         - [1, 2191]
-      colSpan: [1, 12]
+      colNum: 1
 
 functions:
   - name: NSE

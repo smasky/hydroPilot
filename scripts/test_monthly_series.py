@@ -8,7 +8,8 @@ import os
 import sys
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+ROOT = os.path.join(os.path.dirname(__file__), "..", "src")
+sys.path.insert(0, ROOT)
 
 from hydro_pilot.config.loader import load_config
 
@@ -44,7 +45,7 @@ def test_sim_model():
     print("Stage 2: SimModel init + evaluate")
     print("=" * 60)
 
-    from hydro_pilot.sim_model import SimModel
+    from hydro_pilot import SimModel
 
     model = None
     try:

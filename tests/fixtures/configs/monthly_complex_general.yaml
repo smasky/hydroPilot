@@ -1,0 +1,650 @@
+version: general
+basic:
+  projectPath: E:\BMPs\TxtInOut
+  workPath: ../../../work
+  command: swat.exe
+parameters:
+  design:
+    - name: CN2_factor
+      type: float
+      bounds: [0.8, 1.2]
+    - name: ESCO_val
+      type: float
+      bounds: [0.5, 0.95]
+    - name: GW_DELAY_val
+      type: float
+      bounds: [10, 500]
+    - name: SURLAG_val
+      type: float
+      bounds: [0.5, 24]
+  physical:
+    - name: CN2
+      type: float
+      bounds: [35.0, 98.0]
+      mode: r
+      writerType: fixed_width
+      file:
+        name:
+          - 000010001.mgt
+          - 000010002.mgt
+          - 000010003.mgt
+          - 000010004.mgt
+          - 000020001.mgt
+          - 000020002.mgt
+          - 000020003.mgt
+          - 000020004.mgt
+          - 000020005.mgt
+          - 000020006.mgt
+          - 000030001.mgt
+          - 000030002.mgt
+          - 000030003.mgt
+          - 000030004.mgt
+          - 000030005.mgt
+          - 000030006.mgt
+          - 000040001.mgt
+          - 000040002.mgt
+          - 000040003.mgt
+          - 000040004.mgt
+          - 000050001.mgt
+          - 000050002.mgt
+          - 000050003.mgt
+          - 000050004.mgt
+          - 000050005.mgt
+          - 000050006.mgt
+          - 000050007.mgt
+          - 000050008.mgt
+          - 000060001.mgt
+          - 000060002.mgt
+          - 000060003.mgt
+          - 000060004.mgt
+          - 000070001.mgt
+          - 000070002.mgt
+          - 000070003.mgt
+          - 000070004.mgt
+          - 000070005.mgt
+          - 000070006.mgt
+          - 000080001.mgt
+          - 000080002.mgt
+          - 000080003.mgt
+          - 000080004.mgt
+          - 000080005.mgt
+          - 000080006.mgt
+          - 000090001.mgt
+          - 000090002.mgt
+          - 000090003.mgt
+          - 000090004.mgt
+          - 000090005.mgt
+          - 000090006.mgt
+          - 000090007.mgt
+          - 000090008.mgt
+          - 000100001.mgt
+          - 000100002.mgt
+          - 000100003.mgt
+          - 000100004.mgt
+          - 000110001.mgt
+          - 000110002.mgt
+          - 000110003.mgt
+          - 000110004.mgt
+          - 000120001.mgt
+          - 000120002.mgt
+          - 000130001.mgt
+          - 000130002.mgt
+          - 000130003.mgt
+          - 000130004.mgt
+          - 000130005.mgt
+          - 000130006.mgt
+          - 000140001.mgt
+          - 000140002.mgt
+          - 000140003.mgt
+          - 000140004.mgt
+          - 000150001.mgt
+          - 000150002.mgt
+          - 000150003.mgt
+          - 000150004.mgt
+          - 000150005.mgt
+          - 000150006.mgt
+          - 000150007.mgt
+          - 000150008.mgt
+          - 000150009.mgt
+          - 000150010.mgt
+          - 000160001.mgt
+          - 000160002.mgt
+          - 000160003.mgt
+          - 000160004.mgt
+          - 000160005.mgt
+          - 000160006.mgt
+          - 000160007.mgt
+          - 000160008.mgt
+          - 000170001.mgt
+          - 000170002.mgt
+          - 000180001.mgt
+          - 000180002.mgt
+          - 000190001.mgt
+          - 000190002.mgt
+          - 000190003.mgt
+          - 000190004.mgt
+          - 000200001.mgt
+          - 000200002.mgt
+          - 000200003.mgt
+          - 000200004.mgt
+          - 000210001.mgt
+          - 000210002.mgt
+          - 000210003.mgt
+          - 000210004.mgt
+          - 000220001.mgt
+          - 000220002.mgt
+          - 000220003.mgt
+          - 000220004.mgt
+          - 000220005.mgt
+          - 000220006.mgt
+          - 000220007.mgt
+          - 000220008.mgt
+          - 000230001.mgt
+          - 000230002.mgt
+          - 000230003.mgt
+          - 000230004.mgt
+          - 000240001.mgt
+          - 000240002.mgt
+          - 000250001.mgt
+          - 000250002.mgt
+          - 000260001.mgt
+          - 000260002.mgt
+          - 000260003.mgt
+          - 000260004.mgt
+          - 000270001.mgt
+          - 000270002.mgt
+          - 000270003.mgt
+          - 000270004.mgt
+          - 000270005.mgt
+          - 000270006.mgt
+          - 000280001.mgt
+          - 000280002.mgt
+          - 000280003.mgt
+          - 000280004.mgt
+          - 000280005.mgt
+          - 000280006.mgt
+          - 000280007.mgt
+          - 000280008.mgt
+          - 000290001.mgt
+          - 000290002.mgt
+          - 000300001.mgt
+          - 000300002.mgt
+          - 000300003.mgt
+          - 000300004.mgt
+          - 000300005.mgt
+          - 000300006.mgt
+          - 000310001.mgt
+          - 000310002.mgt
+          - 000310003.mgt
+          - 000310004.mgt
+          - 000320001.mgt
+          - 000320002.mgt
+          - 000320003.mgt
+          - 000320004.mgt
+          - 000320005.mgt
+          - 000320006.mgt
+          - 000320007.mgt
+          - 000320008.mgt
+          - 000330001.mgt
+          - 000330002.mgt
+          - 000330003.mgt
+          - 000330004.mgt
+          - 000330005.mgt
+          - 000330006.mgt
+          - 000340001.mgt
+          - 000340002.mgt
+          - 000340003.mgt
+          - 000350001.mgt
+          - 000350002.mgt
+          - 000350003.mgt
+          - 000360001.mgt
+          - 000360002.mgt
+          - 000360003.mgt
+          - 000360004.mgt
+          - 000360005.mgt
+          - 000370001.mgt
+          - 000370002.mgt
+          - 000380001.mgt
+          - 000380002.mgt
+          - 000380003.mgt
+          - 000380004.mgt
+          - 000390001.mgt
+          - 000390002.mgt
+          - 000390003.mgt
+          - 000390004.mgt
+          - 000400001.mgt
+          - 000400002.mgt
+          - 000400003.mgt
+          - 000400004.mgt
+          - 000400005.mgt
+          - 000410001.mgt
+          - 000410002.mgt
+          - 000410003.mgt
+          - 000410004.mgt
+          - 000410005.mgt
+          - 000410006.mgt
+          - 000420001.mgt
+          - 000420002.mgt
+          - 000420003.mgt
+          - 000420004.mgt
+          - 000420005.mgt
+          - 000420006.mgt
+          - 000430001.mgt
+          - 000430002.mgt
+          - 000430003.mgt
+          - 000430004.mgt
+          - 000430005.mgt
+          - 000430006.mgt
+          - 000430007.mgt
+          - 000430008.mgt
+          - 000440001.mgt
+          - 000440002.mgt
+          - 000450001.mgt
+          - 000450002.mgt
+          - 000450003.mgt
+          - 000450004.mgt
+          - 000450005.mgt
+          - 000450006.mgt
+          - 000460001.mgt
+          - 000460002.mgt
+          - 000460003.mgt
+          - 000460004.mgt
+          - 000460005.mgt
+          - 000460006.mgt
+          - 000460007.mgt
+          - 000460008.mgt
+          - 000470001.mgt
+          - 000470002.mgt
+          - 000480001.mgt
+          - 000480002.mgt
+          - 000480003.mgt
+          - 000480004.mgt
+          - 000490001.mgt
+          - 000490002.mgt
+          - 000500001.mgt
+          - 000500002.mgt
+          - 000500003.mgt
+          - 000510001.mgt
+          - 000510002.mgt
+          - 000510003.mgt
+          - 000510004.mgt
+          - 000510005.mgt
+          - 000520001.mgt
+          - 000520002.mgt
+          - 000520003.mgt
+          - 000520004.mgt
+          - 000530001.mgt
+          - 000530002.mgt
+          - 000530003.mgt
+          - 000530004.mgt
+          - 000530005.mgt
+          - 000530006.mgt
+          - 000540001.mgt
+          - 000540002.mgt
+          - 000540003.mgt
+          - 000540004.mgt
+          - 000540005.mgt
+          - 000540006.mgt
+          - 000550001.mgt
+          - 000550002.mgt
+          - 000550003.mgt
+          - 000550004.mgt
+          - 000560001.mgt
+          - 000560002.mgt
+          - 000560003.mgt
+          - 000560004.mgt
+          - 000560005.mgt
+          - 000560006.mgt
+          - 000560007.mgt
+          - 000560008.mgt
+          - 000570001.mgt
+          - 000570002.mgt
+          - 000570003.mgt
+          - 000570004.mgt
+          - 000570005.mgt
+          - 000570006.mgt
+          - 000580001.mgt
+          - 000580002.mgt
+          - 000580003.mgt
+          - 000580004.mgt
+          - 000580005.mgt
+          - 000580006.mgt
+          - 000580007.mgt
+          - 000580008.mgt
+          - 000580009.mgt
+          - 000590001.mgt
+          - 000590002.mgt
+          - 000590003.mgt
+          - 000590004.mgt
+          - 000600001.mgt
+          - 000600002.mgt
+          - 000600003.mgt
+          - 000600004.mgt
+          - 000600005.mgt
+          - 000600006.mgt
+          - 000600007.mgt
+          - 000600008.mgt
+          - 000610001.mgt
+          - 000610002.mgt
+          - 000610003.mgt
+          - 000610004.mgt
+          - 000610005.mgt
+          - 000620001.mgt
+          - 000620002.mgt
+          - 000620003.mgt
+          - 000620004.mgt
+          - 000620005.mgt
+          - 000620006.mgt
+          - 000620007.mgt
+          - 000620008.mgt
+        line: 11
+        start: 1
+        width: 16
+        precision: 2
+        maxNum: 1
+    - name: CN2
+      type: float
+      bounds: [35.0, 98.0]
+      mode: r
+      writerType: fixed_width
+      file:
+        name:
+          - 000040005.mgt
+          - 000040006.mgt
+          - 000040007.mgt
+          - 000040008.mgt
+          - 000070007.mgt
+          - 000070008.mgt
+          - 000070009.mgt
+          - 000070010.mgt
+          - 000120003.mgt
+          - 000120004.mgt
+          - 000130007.mgt
+          - 000130008.mgt
+          - 000130009.mgt
+          - 000130010.mgt
+          - 000130011.mgt
+          - 000130012.mgt
+          - 000140005.mgt
+          - 000140006.mgt
+          - 000140007.mgt
+          - 000140008.mgt
+          - 000170003.mgt
+          - 000170004.mgt
+          - 000210005.mgt
+          - 000210006.mgt
+          - 000210007.mgt
+          - 000210008.mgt
+          - 000220009.mgt
+          - 000220010.mgt
+          - 000220011.mgt
+          - 000220012.mgt
+          - 000220013.mgt
+          - 000220014.mgt
+          - 000220015.mgt
+          - 000220016.mgt
+          - 000230005.mgt
+          - 000230006.mgt
+          - 000230007.mgt
+          - 000230008.mgt
+          - 000240003.mgt
+          - 000240004.mgt
+          - 000240005.mgt
+          - 000240006.mgt
+          - 000270007.mgt
+          - 000270008.mgt
+          - 000270009.mgt
+          - 000270010.mgt
+          - 000310005.mgt
+          - 000310006.mgt
+          - 000310007.mgt
+          - 000310008.mgt
+          - 000310009.mgt
+          - 000310010.mgt
+          - 000330007.mgt
+          - 000330008.mgt
+          - 000330009.mgt
+          - 000330010.mgt
+          - 000330011.mgt
+          - 000330012.mgt
+          - 000350004.mgt
+          - 000350005.mgt
+          - 000350006.mgt
+          - 000350007.mgt
+          - 000350008.mgt
+          - 000350009.mgt
+          - 000370003.mgt
+          - 000370004.mgt
+          - 000370005.mgt
+          - 000370006.mgt
+          - 000380005.mgt
+          - 000380006.mgt
+          - 000380007.mgt
+          - 000380008.mgt
+          - 000390005.mgt
+          - 000390006.mgt
+          - 000390007.mgt
+          - 000390008.mgt
+          - 000420007.mgt
+          - 000420008.mgt
+          - 000420009.mgt
+          - 000420010.mgt
+          - 000420011.mgt
+          - 000420012.mgt
+          - 000450007.mgt
+          - 000450008.mgt
+          - 000450009.mgt
+          - 000450010.mgt
+          - 000450011.mgt
+          - 000450012.mgt
+          - 000450013.mgt
+          - 000450014.mgt
+          - 000460009.mgt
+          - 000460010.mgt
+          - 000460011.mgt
+          - 000460012.mgt
+          - 000460013.mgt
+          - 000460014.mgt
+          - 000480005.mgt
+          - 000480006.mgt
+          - 000480007.mgt
+          - 000480008.mgt
+          - 000480009.mgt
+          - 000480010.mgt
+          - 000490003.mgt
+          - 000490004.mgt
+          - 000510006.mgt
+          - 000510007.mgt
+          - 000510008.mgt
+          - 000510009.mgt
+          - 000510010.mgt
+          - 000510011.mgt
+          - 000520005.mgt
+          - 000520006.mgt
+          - 000520007.mgt
+          - 000520008.mgt
+          - 000530007.mgt
+          - 000530008.mgt
+          - 000530009.mgt
+          - 000530010.mgt
+          - 000530011.mgt
+          - 000530012.mgt
+          - 000570007.mgt
+          - 000570008.mgt
+          - 000570009.mgt
+          - 000570010.mgt
+          - 000590005.mgt
+          - 000590006.mgt
+          - 000590007.mgt
+          - 000590008.mgt
+          - 000600009.mgt
+          - 000600010.mgt
+          - 000600011.mgt
+          - 000600012.mgt
+          - 000600013.mgt
+          - 000600014.mgt
+          - 000600015.mgt
+          - 000600016.mgt
+          - 000610006.mgt
+          - 000610007.mgt
+          - 000610008.mgt
+          - 000610009.mgt
+          - 000610010.mgt
+          - 000610011.mgt
+          - 000620009.mgt
+          - 000620010.mgt
+          - 000620011.mgt
+          - 000620012.mgt
+          - 000620013.mgt
+          - 000620014.mgt
+        line: 11
+        start: 1
+        width: 16
+        precision: 2
+        maxNum: 1
+    - name: ESCO_HRU
+      type: float
+      bounds: [0.0, 1.0]
+      mode: v
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 10
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - name: ESCO_HRU
+      type: float
+      bounds: [0.0, 1.0]
+      mode: v
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 10
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - name: GW_DELAY
+      type: float
+      bounds: [0.0, 500.0]
+      mode: v
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 4
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+    - name: SURLAG_BSN
+      type: float
+      bounds: [0.05, 24.0]
+      mode: v
+      writerType: fixed_width
+      file:
+        name: basins.bsn
+        line: 20
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+  hardBound: true
+  transformer: monthly_transform
+series:
+  - id: flow
+    desc: Monthly streamflow at outlet
+    sim:
+      file: output.rch
+      colSpan: [51, 61]
+      readerType: text
+      rowRanges:
+        - [71, 753, 62]
+        - [877, 1559, 62]
+        - [1683, 2365, 62]
+    obs:
+      file: ../../../examples/obs_flow_monthly.txt
+      rowRanges:
+        - [1, 36]
+      colSpan: [1, 12]
+      readerType: text
+    size: 36
+  - id: tn
+    desc: Monthly total nitrogen at outlet
+    sim:
+      file: output.rch
+      colSpan: [544, 553]
+      readerType: text
+      rowRanges:
+        - [71, 753, 62]
+        - [877, 1559, 62]
+        - [1683, 2365, 62]
+    obs:
+      file: ../../../examples/obs_tn_monthly.txt
+      rowRanges:
+        - [1, 36]
+      colSpan: [1, 12]
+      readerType: text
+    size: 36
+functions:
+  - name: NSE
+    kind: builtin
+  - name: KGE
+    kind: builtin
+  - name: RMSE
+    kind: builtin
+  - name: monthly_transform
+    kind: external
+    file: ../../../examples/monthly_transform.py
+    args: [X]
+  - name: calc_annual_tn_load
+    kind: external
+    file: ../../../examples/calc_tn_load.py
+    args: [tn_sim]
+derived:
+  - id: nse_flow
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+  - id: nse_tn
+    call:
+      func: NSE
+      args: [tn.sim, tn.obs]
+  - id: kge_flow
+    call:
+      func: KGE
+      args: [flow.sim, flow.obs]
+  - id: rmse_flow
+    call:
+      func: RMSE
+      args: [flow.sim, flow.obs]
+  - id: annual_tn
+    call:
+      func: calc_annual_tn_load
+      args: [tn.sim]
+objectives:
+  items:
+    - id: obj_nse_flow
+      desc: Maximize NSE for flow
+      ref: nse_flow
+      sense: max
+    - id: obj_nse_tn
+      desc: Maximize NSE for TN
+      ref: nse_tn
+      sense: max
+diagnostics:
+  items:
+    - id: diag_kge
+      name: KGE flow
+      ref: kge_flow
+    - id: diag_rmse
+      name: RMSE flow
+      ref: rmse_flow
+    - id: diag_tn_load
+      name: Annual TN load
+      ref: annual_tn
+reporter:
+  flushInterval: 50
+  holdingPenLimit: 20
+  series: []

@@ -1,2 +1,0 @@
-- [Core Design Decisions](project_design_decisions.md) — context/error/reporter non-obvious design choices
-- [SWAT Reference Info](project_swat_reference.md) — test project paths, file format quirks, template status

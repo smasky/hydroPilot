@@ -2,103 +2,138 @@
 
 # HydroPilot
 
-> A declarative orchestration framework for hydrological model calibration, evaluation, and optimization.
+> A configuration-first orchestration framework for hydrological model calibration, evaluation, and optimization.
 
-HydroPilot is a model-agnostic framework for running hydrological modeling workflows through configuration rather than project-specific glue scripts. It abstracts parameter mapping, input writing, model execution, result extraction, metric evaluation, objective calculation, and run reporting into one unified pipeline.
+HydroPilot turns the repetitive glue code around hydrological modeling into a reusable workflow: parameter mapping, input writing, model execution, result extraction, objective evaluation, and run reporting.
 
-HydroPilot is the **project name**.
+The core is model-agnostic. In the current repository, SWAT is the first built-in template and the most mature integration.
 
 ## What HydroPilot is
 
 HydroPilot is:
 
-- a **general orchestration framework** for hydrological model experiments
-- a **configuration-first workflow** built around YAML
-- a **plugin-oriented architecture** for model templates, parameter writers, result readers, runners, and evaluators
-- a framework intended to support **multiple hydrological models**, not just one model family
+- a configuration-driven workflow framework
+- a reusable runtime for repeated model experiments
+- a general schema that is not tied to one model family
+- a template system that can make specific models easier to configure
 
-## What HydroPilot is not
+HydroPilot is not:
 
-HydroPilot is **not**:
-
-- a SWAT-only parameter editing script collection
-- a single hard-coded workflow tied to one model’s file structure
+- a SWAT-only script bundle
 - an optimizer by itself
-- a finished platform with every model integration already implemented
+- a finished multi-model platform with every template already implemented
 
-SWAT is currently the **most mature built-in template** and the **first fully implemented template** in the repository, but the framework itself is designed to be broader than SWAT.
+## Current status
 
-## Why configuration instead of scripts?
+What is already available in code today:
 
-In many calibration projects, most of the maintenance burden is not the optimization algorithm itself, but the surrounding scripting work:
-
-- writing parameters into multiple input files
-- launching the external model safely for repeated runs
-- parsing model outputs into comparable series
-- computing metrics, objectives, constraints, and diagnostics
-- storing runs in a reproducible way
-
-HydroPilot moves that repeated logic into a reusable architecture so that a calibration workflow becomes mostly a **configuration task** instead of a new scripting task for every project.
-
-## Core concepts
-
-### 1. General mode vs template mode
-
-HydroPilot currently supports two entry styles:
-
-- **General mode**: `version: general`
-  - You define the workflow explicitly using the generic schema.
-  - This is the model-agnostic core of the framework.
-- **Template mode**: for example `version: swat`
-  - A model template expands a simplified configuration into a standard general configuration.
-
-This separation is important: HydroPilot is not defined by SWAT templates. Templates are just one way to make specific models easier to use.
-
-### 2. Design space vs physical space
-
-HydroPilot uses a two-layer parameter architecture:
-
-- **design parameters**: the variables seen by the optimizer
-- **physical parameters**: the values ultimately written into model input files
-
-A transformer connects the two spaces. This makes it possible to support one-to-one mappings, one-to-many mappings, grouped mappings, or custom transformations.
-
-### 3. Series, derived values, objectives, and diagnostics
-
-The evaluation pipeline is structured as:
-
-- **series**: extracted or computed simulation/observation series
-- **derived**: values computed from series or previous results
-- **objectives**: values exposed to the optimizer
-- **constraints**: optional feasibility terms
-- **diagnostics**: values recorded for analysis but not optimized directly
-
-## Current repository status
-
-This repository already contains the core orchestration pipeline:
-
-- configuration loading and validation
-- parameter transformation and writing
-- subprocess-based model execution
+- `version: general` workflow mode
+- `version: swat` template mode
+- fixed-width parameter writing
 - text-based series extraction
-- derived/objective/constraint evaluation
-- run reporting to SQLite and CSV
-- a UQPyL adapter for optimization workflows
+- subprocess-based model execution
+- built-in and external evaluation functions
+- SQLite and CSV run reporting
+- UQPyL integration
+- `hydropilot-validate` CLI
 
-At the current code state:
+What is planned rather than built-in today:
 
-- **general configuration mode** is available
-- **SWAT template mode** is available
-- **SWAT is the only registered built-in template**
-- other model templates such as **APEX / HBV / VIC / HEC-HMS** should be described as **planned**, not already implemented
+- APEX
+- HBV
+- VIC
+- HEC-HMS
+
+## Why this exists
+
+In hydrological calibration work, the optimizer is often not the painful part. The painful part is the surrounding scripting:
+
+- mapping optimizer variables to physical parameters
+- writing values into multiple model input files
+- launching an external model repeatedly and safely
+- extracting comparable output series
+- computing objectives, constraints, and diagnostics
+- keeping run records for debugging and comparison
+
+HydroPilot packages that repeated work into one reproducible pipeline.
+
+## Two configuration modes
+
+### 1. General mode
+
+Use `version: general` when you want full control over a model-agnostic workflow.
+
+- you define parameter writing explicitly
+- you define series readers explicitly
+- this is the real framework core
+
+### 2. Template mode
+
+Use a template version such as `version: swat` when you want a shorter model-specific config.
+
+- the template expands a compact config into a standard general config
+- runtime execution still happens through the same general pipeline
+- in the current codebase, `swat` is the only built-in template
+
+## Installation
+
+Requires Python 3.10+.
+
+Install the package in editable mode:
+
+```bash
+pip install -e .
+```
+
+Install development dependencies:
+
+```bash
+pip install -e .[dev]
+```
+
+Install UQPyL integration support:
+
+```bash
+pip install -e .[uqpyl]
+```
 
 ## Quick start
 
-### General mode
+### Validate a configuration
 
-General mode is the model-agnostic core schema. It is the right entry point when you want to wire a custom model manually.
+```bash
+hydropilot-validate path/to/config.yaml
+```
 
-A minimal illustrative configuration looks like this:
+### Evaluate parameter vectors with `SimModel`
+
+```python
+import numpy as np
+from hydro_pilot import SimModel
+
+X = np.array([
+    [50.0, 0.5, 100.0],
+])
+
+with SimModel("examples/test_monthly.yaml") as model:
+    result = model.evaluate(X)
+    print(result["objs"])
+```
+
+### Use with UQPyL
+
+```python
+from hydro_pilot.integrations import UQPyLAdapter
+from UQPyL.optimization import DE
+
+with UQPyLAdapter("examples/test_daily.yaml") as problem:
+    optimizer = DE(problem)
+    optimizer.run()
+```
+
+## Minimal general-mode example
+
+This example reflects the current general schema more closely than the older simplified drafts:
 
 ```yaml
 version: general
@@ -115,6 +150,7 @@ parameters:
   physical:
     - name: K
       mode: v
+      writerType: fixed_width
       file:
         name: model.inp
         line: 12
@@ -125,15 +161,17 @@ parameters:
 series:
   - id: flow
     sim:
-      file: model.out
-      rowRanges:
-        - [1, 365]
-      colNum: 2
+      readerType: text
+      file:
+        name: model.out
+        rowRanges: [[1, 365]]
+        colNum: 2
     obs:
-      file: obs_flow.txt
-      rowRanges:
-        - [1, 365]
-      colNum: 2
+      readerType: text
+      file:
+        name: obs_flow.txt
+        rowRanges: [[1, 365]]
+        colNum: 2
 
 functions:
   - name: NSE
@@ -152,39 +190,24 @@ objectives:
       sense: max
 ```
 
-You can evaluate a batch of parameter vectors directly with `SimModel`:
+## Template example
 
-```python
-import numpy as np
-from model_driver.sim_model import SimModel
+The repository currently has working SWAT examples such as:
 
-X = np.array([
-    [0.5],
-])
+- `examples/test_daily.yaml`
+- `examples/test_monthly.yaml`
+- `examples/test_monthly_complex.yaml`
+- `examples/test_monthly_series.yaml`
 
-with SimModel("path/to/general.yaml") as model:
-    result = model.evaluate(X)
-    print(result["objs"])
-```
-
-Notes:
-
-- The example above is meant to show the generic schema.
-- In the current repository, the most complete ready-made examples are still the SWAT-based examples under `examples/`.
-
-### Template mode
-
-Template mode is for model-specific integrations. In the current repository, the built-in template is `swat`.
-
-A real example already included in the repository is:
+A compact SWAT config looks like this:
 
 ```yaml
-version: "swat"
+version: swat
 
 basic:
-  projectPath: "E:\\DJBasin\\TxtInOutFSB"
-  workPath: "./work"
-  command: "swat.exe"
+  projectPath: E:\BMPs\TxtInOut
+  workPath: ./work
+  command: swat.exe
 
 parameters:
   design:
@@ -197,17 +220,15 @@ parameters:
 
 series:
   - id: flow
-    desc: "Daily streamflow at outlet"
     sim:
       file: output.rch
-      subbasin: 33
-      period: [2010, 2015]
-      timestep: daily
+      id: 62
+      period: [2019, 2021]
+      timestep: monthly
       colSpan: [50, 61]
     obs:
-      file: obs_flow.txt
-      rowRanges:
-        - [1, 2191]
+      file: obs_flow_monthly.txt
+      rowRanges: [[1, 36]]
       colSpan: [1, 12]
 
 functions:
@@ -223,25 +244,93 @@ derived:
 objectives:
   items:
     - id: obj_nse
-      desc: "Maximize NSE"
       ref: nse_flow
       sense: max
 ```
 
-To run an optimization workflow with UQPyL:
+## Path semantics
 
-```python
-from model_driver.wrappers import UQPyLAdapter
-from UQPyL.optimization import DE
+This is important in the current implementation:
 
-with UQPyLAdapter("examples/test_daily.yaml") as problem:
-    optimizer = DE(problem)
-    optimizer.run()
+- observation files such as `obs.file` are resolved relative to the config file
+- simulation output files such as `sim.file` are resolved relative to the runtime project copy / work instance
+
+So if your model produces `output.rch` inside the run workspace, the config should usually keep it as:
+
+```yaml
+sim:
+  readerType: text
+  file: output.rch
 ```
 
-## Built-in functions currently available
+not as a path relative to the YAML file location.
 
-HydroPilot currently includes these built-in functions in the codebase:
+## Runtime chain
+
+HydroPilot now has two distinct chains that are worth understanding.
+
+### Config and template chain
+
+```text
+YAML config
+  -> config.loader
+  -> template registry (if version != general)
+  -> template expansion to general config
+  -> RunConfig
+```
+
+For example, `version: swat` goes through the SWAT template and becomes a standard `version: general` runtime config.
+
+### Runtime execution chain
+
+```text
+SimModel
+  -> Session
+  -> Workspace
+  -> Executor
+     -> ExecutionServices
+        -> ParamSpace
+        -> ParamWritePlan
+        -> ParamApplier
+        -> SeriesPlan
+        -> ObsStore
+        -> SubprocessRunner
+        -> SeriesExtractor
+        -> Evaluator
+  -> RunReporter
+```
+
+Conceptually, the runtime pipeline is:
+
+```text
+Parameter writing
+  -> Model execution
+  -> Series extraction
+  -> Derived/objective evaluation
+  -> Run reporting
+```
+
+## Repository layout
+
+```text
+src/hydro_pilot/
+  api/           public API entry points
+  cli/           command-line interfaces
+  config/        config loading, schema, path resolution
+  evaluation/    functions and scalar evaluation
+  integrations/  external optimization adapters
+  io/            readers, writers, runners
+  models/        template registry and model-specific knowledge
+  params/        parameter space and write application
+  reporting/     run persistence and artifacts
+  runtime/       session, workspace, orchestration
+  series/        series planning, obs store, extraction
+  validation/    user-facing config diagnostics
+```
+
+## Built-in functions
+
+The current built-in function set includes:
 
 - `NSE`
 - `KGE`
@@ -252,9 +341,30 @@ HydroPilot currently includes these built-in functions in the codebase:
 - `LogNSE`
 - `sum_series`
 
-External Python functions are also supported through the function registry.
+External Python functions are also supported.
 
-## Current support matrix
+## Outputs and run records
+
+Each run creates an isolated runtime workspace plus a backup area. Depending on the config and execution path, outputs can include:
+
+- original config copy
+- resolved general config copy
+- copied observation files when applicable
+- `summary.csv`
+- `results.db`
+- `error.jsonl`
+- `error.log`
+- optional exported series CSV files
+
+## CLI status
+
+Right now, the documented built-in CLI is:
+
+- `hydropilot-validate`
+
+Commands such as `run` and `expand` are still better treated as roadmap items until they are added as real entry points.
+
+## Support matrix
 
 | Capability | Status |
 |---|---|
@@ -271,97 +381,27 @@ External Python functions are also supported through the function registry.
 | VIC template | Planned |
 | HEC-HMS template | Planned |
 
-## Architecture
-
-```text
-Config Loading
-  -> Parameter Writing
-  -> Model Execution
-  -> Result Extraction
-  -> Metric / Objective Evaluation
-  -> Result Recording
-```
-
-```text
-SimModel
-  └─ ModelAdapter
-      ├─ ParamManager
-      │   └─ Transformer
-      │   └─ ParamWriter
-      ├─ ModelRunner
-      ├─ SeriesExtractor
-      │   └─ SeriesReader
-      ├─ Evaluator
-      │   └─ FunctionManager
-      └─ RunReporter
-```
-
-The main architectural idea is simple:
-
-- keep the core pipeline stable
-- push model-specific details to templates and plugins
-- separate optimization-space variables from file-space parameters
-- make workflows reproducible and inspectable
-
-## Outputs and run records
-
-Each run creates an isolated working area and a backup folder that can contain:
-
-- the original configuration file
-- the resolved general configuration generated by template expansion
-- copied observation files when applicable
-- `summary.csv`
-- `results.db`
-- `error.jsonl`
-- `error.log`
-
-This gives HydroPilot a basic but useful experiment trail for debugging and comparison.
-
-## Installation status
-
-HydroPilot is currently **source-layout first** in this repository.
-
-That means:
-
-- the project name is **HydroPilot**
-- the current package name is still **`model_driver`**
-- a formal packaging flow (`pyproject.toml`, install extras, release metadata) should be treated as a near-term roadmap item
-
-At minimum, the current codebase expects an environment with packages such as:
-
-- `numpy`
-- `PyYAML`
-- `pydantic`
-
-For optimization workflows, `UQPyL` is also needed.
-
 ## Roadmap
 
 ### Near term
 
-- unify branding around **HydroPilot**
-- align documentation with the current code API
-- add packaging metadata and installation guidance
-- improve example coverage for both general mode and template mode
-- add CLI entry points such as `validate`, `run`, and `expand`
+- improve README and onboarding guidance
+- add more complete CLI workflows such as `run` and `expand`
+- strengthen tests and cross-platform behavior
+- improve example coverage
 
 ### Mid term
 
-- add more model templates
-- add more readers and writers beyond fixed-width text
-- strengthen tests and schema documentation
-- improve result inspection and experiment metadata
+- formalize extension contracts for templates, readers, writers, and runners
+- add more IO protocols beyond fixed-width text
+- improve experiment metadata and inspection workflows
 
 ### Long term
 
-- evolve toward a broader multi-model hydrological experimentation platform
+- support more hydrological model templates
 - support more execution backends
-- add richer experiment management and visualization tooling
+- evolve toward a broader experiment management platform
 
-## Project status
+## Project summary
 
-HydroPilot should currently be understood as:
-
-> a strong framework prototype for hydrological model orchestration, with a general core already in place and SWAT as the first fully implemented template.
-
-It is already useful as a research and engineering foundation, but it is still moving toward a more complete public release state.
+HydroPilot already has a usable orchestration core and a real SWAT integration. The next step is not reinventing the runtime again, but making the framework easier to understand, easier to extend, and easier to adopt.

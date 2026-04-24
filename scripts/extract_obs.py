@@ -6,12 +6,13 @@ and writes to obs_flow.txt in the work directory.
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+ROOT = os.path.join(os.path.dirname(__file__), "..", "src")
+sys.path.insert(0, ROOT)
 
 from pathlib import Path
-from hydro_pilot.templates.swat.discovery import discover_swat_project
-from hydro_pilot.templates.swat.variables import calcSwatOutputRows
-from hydro_pilot.config.specs import expand_row_ranges
+from hydro_pilot.models.swat.discovery import discover_swat_project
+from hydro_pilot.models.swat.variables import calcSwatOutputRows
+from hydro_pilot.config.schema.base import expand_row_ranges
 
 PROJECT_PATH = Path(r"E:\DJBasin\TxtInOutFSB")
 OUTPUT_FILE = PROJECT_PATH / "output.rch"

@@ -5,22 +5,25 @@ from datetime import date, datetime
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 from hydro_pilot.config.specs import CallSpec
-from hydro_pilot.config.loader import load_config
-from hydro_pilot.params.writers import getWriter
-from hydro_pilot.params.writers.fixed_width import FixedWidthWriter
-from hydro_pilot.series.readers import getReader
-from hydro_pilot.series.readers.text_reader import TextReader
-from hydro_pilot.series.extractor import SeriesExtractor
-from hydro_pilot.templates.swat.discovery import discover_swat_project
-from hydro_pilot.templates.swat.series import buildSwatSeries, inferSwatOutputType
-from hydro_pilot.templates.swat.variables import calcSwatOutputRows
-from hydro_pilot.errors import RunError
+from hydro_pilot.config.loader import load_config, prepare_config
+from hydro_pilot.validation.entry import validate_config
+from hydro_pilot.io.writers import getWriter
+from hydro_pilot.io.writers.fixed_width import FixedWidthWriter
+from hydro_pilot.io.readers import getReader
+from hydro_pilot.io.readers.text import TextReader
+from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan
+from hydro_pilot.models.swat.discovery import discover_swat_project
+from hydro_pilot.models.swat.library import SWAT_DB, SWAT_PARAM_LIBRARY
+from hydro_pilot.models.swat.series import buildSwatSeries, inferSwatOutputType
+from hydro_pilot.models.swat.variables import calcSwatOutputRows
+from hydro_pilot.runtime.errors import RunError
 
-CFG_PATH = ROOT / "examples" / "test_monthly_complex.yaml"
+CFG_PATH = ROOT / "tests" / "fixtures" / "configs" / "monthly_complex.yaml"
 PROJECT_PATH = Path(r"E:\BMPs\TxtInOut")
 
 
@@ -29,11 +32,22 @@ def _requires_monthly_project():
         pytest.skip(f"SWAT monthly project not found: {PROJECT_PATH}")
 
 
-def test_monthly_complex_template_expands_explicit_io_types():
-    _requires_monthly_project()
+def test_swat_library_reads_parameters_from_swat_db():
+    assert SWAT_PARAM_LIBRARY == SWAT_DB["parameters"]
+    assert "parameters" in SWAT_DB
+    assert "series" in SWAT_DB
+    assert "CN2" in SWAT_PARAM_LIBRARY
 
+
+def test_monthly_complex_template_expands_explicit_io_types():
+
+    diagnostics = validate_config(CFG_PATH)
+    prepared = prepare_config(CFG_PATH)
     cfg = load_config(CFG_PATH)
 
+    assert diagnostics == []
+    assert prepared.version == "swat"
+    assert prepared.expanded_raw["version"] == "general"
     assert cfg.version == "general"
     assert len(cfg.parameters.design) == 4
     assert len(cfg.parameters.physical) == 6
@@ -61,7 +75,8 @@ def test_swat_series_builder_extracts_monthly_rows_and_defaults():
         "id": "flow",
         "sim": {
             "file": "output.rch",
-            "subbasin": 1,
+            "variable": "FLOW_OUT",
+            "id": 1,
             "period": [2019, 2021],
         },
         "obs": {
@@ -75,11 +90,35 @@ def test_swat_series_builder_extracts_monthly_rows_and_defaults():
 
     sim = result[0]["sim"]
     assert sim["readerType"] == "text"
-    assert "subbasin" not in sim
+    assert sim["colSpan"] == [52, 61]
+    assert "id" not in sim
     assert "period" not in sim
     assert sim["rowRanges"]
     assert result[0]["size"] == 36
     assert result[0]["obs"]["readerType"] == "text"
+
+
+def test_swat_series_builder_keeps_explicit_column_when_variable_is_present():
+    meta = {
+        "output_start_year": 2019,
+        "output_end_year": 2021,
+        "n_subbasins": 3,
+        "subbasins": {},
+        "timestep": "monthly",
+    }
+    raw_series = [{
+        "id": "flow",
+        "sim": {
+            "file": "output.rch",
+            "variable": "__BAD_VARIABLE__",
+            "id": 1,
+            "period": [2019, 2021],
+            "colSpan": [999, 1000],
+        },
+    }]
+
+    result = buildSwatSeries(raw_series, meta, readerType="text")
+    assert result[0]["sim"]["colSpan"] == [999, 1000]
 
 
 def test_swat_period_accepts_yaml_date_objects_for_monthly_rows():
@@ -94,14 +133,14 @@ def test_swat_period_accepts_yaml_date_objects_for_monthly_rows():
     month_rows = calcSwatOutputRows(
         meta=meta,
         outputType="rch",
-        subbasin=62,
+        id=62,
         period=["2019-02", "2021-11"],
         timestep="monthly",
     )
     date_rows = calcSwatOutputRows(
         meta=meta,
         outputType="rch",
-        subbasin=62,
+        id=62,
         period=[date(2019, 2, 3), datetime(2021, 11, 1, 8, 30)],
         timestep="monthly",
     )
@@ -123,13 +162,19 @@ def test_series_extractor_warns_and_flattens_called_series_shape():
         series = []
         series_index = {"flow": type("SeriesNode", (), {"sim": None})()}
 
-    extractor = SeriesExtractor(DummyCfg(), DummyFuncManager())
-    extractor.seriesDict = {
-        "derived_flow": {"obs": None, "simItem": call_spec, "obsItem": None}
+    plan = SeriesPlan([])
+    plan.items = {
+        "derived_flow": {"id": "derived_flow", "obsItem": None, "simItem": call_spec}
     }
 
+    class DummyObsStore(ObsStore):
+        def __init__(self):
+            self.obs_data = {}
+
+    extractor = SeriesExtractor(DummyCfg(), DummyFuncManager(), plan, DummyObsStore())
+
     context = {"flow.sim": [10.0, 20.0], "warnings": []}
-    env = extractor.extract_all("work", context)
+    env = extractor.extract("work", context)
 
     assert env["derived_flow.sim"].tolist() == [1.0, 2.0, 3.0, 4.0]
     assert len(env["warnings"]) == 1
@@ -148,13 +193,19 @@ def test_series_extractor_requires_called_series_dependencies_in_order():
         series = []
         series_index = {"later": type("SeriesNode", (), {"sim": None})()}
 
-    extractor = SeriesExtractor(DummyCfg(), DummyFuncManager())
-    extractor.seriesDict = {
-        "early": {"obs": None, "simItem": call_spec, "obsItem": None}
+    plan = SeriesPlan([])
+    plan.items = {
+        "early": {"id": "early", "obsItem": None, "simItem": call_spec}
     }
 
+    class DummyObsStore(ObsStore):
+        def __init__(self):
+            self.obs_data = {}
+
+    extractor = SeriesExtractor(DummyCfg(), DummyFuncManager(), plan, DummyObsStore())
+
     with pytest.raises(RunError, match="defined earlier in series order"):
-        extractor.extract_all("work", {"warnings": []})
+        extractor.extract("work", {"warnings": []})
 
 
 
@@ -170,7 +221,7 @@ def test_non_swat_output_series_keeps_general_fields():
         "id": "custom",
         "sim": {
             "file": "custom_output.txt",
-            "subbasin": 3,
+            "id": 3,
             "period": [2019, 2021],
             "rowRanges": [[1, 3]],
             "colSpan": [1, 12],
@@ -181,11 +232,67 @@ def test_non_swat_output_series_keeps_general_fields():
 
     sim = result[0]["sim"]
     assert sim["readerType"] == "text"
-    assert sim["subbasin"] == 3
+    assert sim["id"] == 3
     assert sim["period"] == [2019, 2021]
     assert sim["rowRanges"] == [[1, 3]]
     assert sim["colSpan"] == [1, 12]
     assert "size" not in result[0]
+
+
+def test_non_swat_output_series_with_variable_requires_explicit_column():
+    raw_series = [{
+        "id": "custom",
+        "sim": {
+            "file": "custom_output.txt",
+            "variable": "FLOW_OUT",
+            "id": 3,
+            "period": [2019, 2021],
+        },
+    }]
+
+    with pytest.raises(ValueError, match="requires a SWAT output file"):
+        buildSwatSeries(raw_series, meta={"timestep": "monthly"}, readerType="text")
+
+
+def test_swat_series_variable_must_match_file():
+    raw_series = [{
+        "id": "bad",
+        "sim": {
+            "file": "output.rch",
+            "variable": "__NOT_A_SWAT_VARIABLE__",
+            "id": 1,
+            "period": [2019, 2021],
+        },
+    }]
+
+    with pytest.raises(ValueError, match="does not match file"):
+        buildSwatSeries(raw_series, meta={"timestep": "monthly"}, readerType="text")
+
+
+def test_obs_variable_is_not_auto_resolved():
+    raw_series = [{
+        "id": "flow",
+        "sim": {
+            "file": "output.rch",
+            "variable": "FLOW_OUT",
+            "id": 1,
+            "period": [2019, 2021],
+            "colSpan": [52, 61],
+        },
+        "obs": {
+            "file": "obs.txt",
+            "rowRanges": [[1, 10]],
+            "variable": "FLOW_OUT",
+        },
+    }]
+
+    result = buildSwatSeries(
+        raw_series,
+        meta={"timestep": "monthly", "output_start_year": 2019, "output_end_year": 2021, "n_subbasins": 3, "subbasins": {}},
+        readerType="text",
+    )
+    assert "colSpan" not in result[0]["obs"]
+    assert result[0]["obs"]["readerType"] == "text"
 
 
 def test_minimal_io_registries_dispatch_existing_implementations():
