@@ -40,6 +40,7 @@ def test_swat_library_reads_parameters_from_swat_db():
 
 
 def test_monthly_complex_template_expands_explicit_io_types():
+    _requires_monthly_project()
 
     diagnostics = validate_config(CFG_PATH)
     prepared = prepare_config(CFG_PATH)

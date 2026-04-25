@@ -9,6 +9,14 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+SWAT_VALIDATION_PROJECT = Path(r"E:\DJBasin\TxtInOutFSB")
+
+
+def _requires_swat_validation_project():
+    if not SWAT_VALIDATION_PROJECT.exists():
+        pytest.skip(f"SWAT validation project not found: {SWAT_VALIDATION_PROJECT}")
+
+
 from hydro_pilot.config.loader import load_config, prepare_config
 from hydro_pilot.validation.entry import validate_config
 
@@ -360,10 +368,12 @@ def test_validate_general_config_reports_unknown_reader_type(tmp_path: Path):
     assert "Unknown reader type" in diagnostics[0].message
 
 def test_validate_swat_config_requires_variable_or_explicit_column_for_swat_shortcut(tmp_path: Path):
+    _requires_swat_validation_project()
+
     config = {
         "version": "swat",
         "basic": {
-            "projectPath": "E:\\DJBasin\\TxtInOutFSB",
+            "projectPath": str(SWAT_VALIDATION_PROJECT),
             "workPath": "./work",
             "command": "swat.exe",
         },
@@ -822,10 +832,12 @@ def test_validate_general_config_reports_missing_dependencies_path(tmp_path: Pat
 
 
 def test_validate_swat_config_reports_unknown_design_parameter(tmp_path: Path):
+    _requires_swat_validation_project()
+
     config = {
         "version": "swat",
         "basic": {
-            "projectPath": "E:\\DJBasin\\TxtInOutFSB",
+            "projectPath": str(SWAT_VALIDATION_PROJECT),
             "workPath": "./work",
             "command": "swat.exe",
         },
