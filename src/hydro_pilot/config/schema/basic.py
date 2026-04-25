@@ -11,9 +11,10 @@ class BasicSpec(ConfigNode):
     projectPath: Path = Field(alias="project_path")
     workPath: Path = Field(alias="work_path")
     configPath: Path = Field(alias="config_path")
-    command: str
+    command: str | list[str]
     timeout: int = -1
     parallel: int = 1
+    keepInstances: bool = Field(default=False, alias="keep_instances")
 
     @classmethod
     def from_raw(cls, raw: Dict[str, Any], base_path: Path) -> "BasicSpec":

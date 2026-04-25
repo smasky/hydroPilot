@@ -8,21 +8,56 @@ class SimModel:
         self.cfg = load_config(cfgPath)
         self.session = Session(self.cfg, cfgPath)
 
-        self.nInput = self.session.nInput
-        self.xLabels = self.session.xLabels
-        self.varType = self.session.varType
-        self.varSet = self.session.varSet
-        self.ub = self.session.ub
-        self.lb = self.session.lb
-        self.nOutput = self.session.nOutput
-        self.optType = self.session.optType
-        self.nConstraints = self.session.nConstraints
-        self.optSign = self.session.optSign
-        self.runPath = self.session.runPath
-        self.backupPath = self.session.backupPath
+    @property
+    def nInput(self):
+        return self.session.nInput
 
-    def evaluate(self, X):
-        return self.session.evaluate(X)
+    @property
+    def xLabels(self):
+        return self.session.xLabels
+
+    @property
+    def varType(self):
+        return self.session.varType
+
+    @property
+    def varSet(self):
+        return self.session.varSet
+
+    @property
+    def ub(self):
+        return self.session.ub
+
+    @property
+    def lb(self):
+        return self.session.lb
+
+    @property
+    def nOutput(self):
+        return self.session.nOutput
+
+    @property
+    def optType(self):
+        return self.session.optType
+
+    @property
+    def nConstraints(self):
+        return self.session.nConstraints
+
+    @property
+    def optSign(self):
+        return self.session.optSign
+
+    @property
+    def runPath(self):
+        return self.session.runPath
+
+    @property
+    def archivePath(self):
+        return self.session.archivePath
+
+    def run(self, X):
+        return self.session.run(X)
 
     def close(self):
         self.session.close()

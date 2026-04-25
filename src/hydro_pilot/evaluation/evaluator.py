@@ -20,16 +20,14 @@ class Evaluator:
         obj_refs = {}
         con_refs = {}
 
-        for obj_id in self.cfg.objectives.use:
-            obj_cfg = self.cfg.objectives.items[obj_id]
+        for obj_cfg in self.cfg.objectives.items:
             optType.append(obj_cfg.sense)
-            obj_refs[obj_id] = obj_cfg.ref
+            obj_refs[obj_cfg.id] = obj_cfg.ref
 
         nOutput = len(optType)
 
-        for con_id in self.cfg.constraints.use:
-            con_cfg = self.cfg.constraints.items[con_id]
-            con_refs[con_id] = con_cfg.ref
+        for con_cfg in self.cfg.constraints.items:
+            con_refs[con_cfg.id] = con_cfg.ref
 
         nConstraints = len(con_refs)
 
@@ -37,9 +35,8 @@ class Evaluator:
 
     def _parse_diagnostics(self):
         diag_refs = {}
-        for diag_id in self.cfg.diagnostics.use:
-            diag_cfg = self.cfg.diagnostics.items[diag_id]
-            diag_refs[diag_id] = diag_cfg.ref
+        for diag_cfg in self.cfg.diagnostics.items:
+            diag_refs[diag_cfg.id] = diag_cfg.ref
         return diag_refs
 
     def _build_fatal_derived_ids(self):
@@ -127,7 +124,7 @@ class Evaluator:
         result = {}
         ensure_warnings(context)
         for item_id, ref_id in refs.items():
-            diagCfg = self.cfg.diagnostics.items[item_id]
+            diagCfg = next(item for item in self.cfg.diagnostics.items if item.id == item_id)
             if ref_id not in env:
                 append_warning(context, RunError(
                     stage="evaluator", code="MISSING_CONTEXT", target=item_id,

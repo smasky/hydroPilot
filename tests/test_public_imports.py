@@ -10,16 +10,18 @@ if str(SRC) not in sys.path:
 
 
 def test_top_level_exports_sim_model():
-    from hydro_pilot import SimModel
+    from hydro_pilot import BatchRunResult, SimModel
+    from hydro_pilot.api import BatchRunResult as ApiBatchRunResult
     from hydro_pilot.api import SimModel as ApiSimModel
 
     assert SimModel is ApiSimModel
+    assert BatchRunResult is ApiBatchRunResult
 
 
 def test_migrated_layers_export_new_paths():
     from hydro_pilot.evaluation import Evaluator, FunctionManager
     from hydro_pilot.params import ParamApplier, ParamSpace, ParamWritePlan
-    from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan
+    from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan, SeriesPlanItem
     from hydro_pilot.runtime import (
         ExecutionServices,
         Executor,
@@ -35,6 +37,7 @@ def test_migrated_layers_export_new_paths():
     assert ParamWritePlan.__name__ == "ParamWritePlan"
     assert ParamApplier.__name__ == "ParamApplier"
     assert SeriesPlan.__name__ == "SeriesPlan"
+    assert SeriesPlanItem.__name__ == "SeriesPlanItem"
     assert ObsStore.__name__ == "ObsStore"
     assert SeriesExtractor.__name__ == "SeriesExtractor"
     assert ExecutionServices.__name__ == "ExecutionServices"

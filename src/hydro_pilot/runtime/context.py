@@ -22,7 +22,7 @@ def create_context(X, i: int, batch_id: int) -> dict[str, Any]:
     }
 
 
-def ensure_warnings(context: dict[str, Any]) -> list:
+def ensure_warnings(context: dict[str, Any]) -> list[RunError]:
     return context.setdefault(KEY_WARNINGS, [])
 
 
@@ -36,25 +36,23 @@ def set_physical_params(context: dict[str, Any], P) -> None:
 
 
 def set_run_error(context: dict[str, Any], error: RunError) -> None:
-    context[KEY_ERROR] = {
-        "stage": error.stage,
-        "code": error.code,
-        "target": error.target,
-        "message": error.message,
-        "severity": "fatal",
-        "traceback": error.traceback,
-    }
+    error.severity = "fatal"
+    context[KEY_ERROR] = error
 
 
 def set_unexpected_error(context: dict[str, Any], exc: Exception) -> None:
-    context[KEY_ERROR] = {
-        "stage": "unknown",
-        "code": "UNEXPECTED_EXCEPTION",
-        "target": "simulation",
-        "message": str(exc),
-        "severity": "fatal",
-        "traceback": traceback.format_exc(),
-    }
+    archive = context.get("runner_log_archive")
+    message = str(exc)
+    if archive:
+        message = f"{message}; archived_logs={archive}"
+    context[KEY_ERROR] = RunError(
+        stage="unknown",
+        code="UNEXPECTED_EXCEPTION",
+        target="simulation",
+        message=message,
+        severity="fatal",
+        traceback=traceback.format_exc(),
+    )
 
 
 def has_error(context: dict[str, Any]) -> bool:
@@ -62,12 +60,12 @@ def has_error(context: dict[str, Any]) -> bool:
 
 
 def apply_on_error_defaults(context: dict[str, Any], cfg) -> None:
-    for obj_id in cfg.objectives.use:
-        context[obj_id] = cfg.objectives.items[obj_id].on_error
-    for con_id in cfg.constraints.use:
-        context[con_id] = cfg.constraints.items[con_id].on_error
-    for diag_id in cfg.diagnostics.use:
-        context[diag_id] = cfg.diagnostics.items[diag_id].on_error
+    for item in cfg.objectives.items:
+        context[item.id] = item.on_error
+    for item in cfg.constraints.items:
+        context[item.id] = item.on_error
+    for item in cfg.diagnostics.items:
+        context[item.id] = item.on_error
 
 
 def to_float_or_nan(value) -> float:

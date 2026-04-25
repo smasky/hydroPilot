@@ -1,12 +1,12 @@
+from collections.abc import Sequence
 from abc import ABC, abstractmethod
-from pathlib import Path
 
 
 class ModelRunner(ABC):
     """Abstract interface for executing a model."""
 
     @abstractmethod
-    def run(self, work_path: str, command, timeout: int) -> int:
+    def run(self, work_path: str, command: str | Sequence[str], timeout: int) -> int:
         """Execute the model in the given working directory.
 
         Args:

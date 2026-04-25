@@ -1,262 +1,313 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working in this repository.
 
 ## 沟通约定
 
-- 与用户沟通时，称呼用户为“小天”。
-- 讨论类文档使用中文。
-- 代码注释使用英文。
-- `.history/` 下的文件一律忽略。
-- 与 Claude 相关的项目文件放在 `.claude/` 下。
-- 项目技术文档与长期记忆放在 `.claude/memory/` 下。
-- 对于用户已经明确点名的目标文件，可以直接修改；如果涉及跨目录的大重构、批量重命名、公共 API 迁移，先与用户确认范围再动手。
+- 与用户讨论架构、方案、文档时，默认使用中文。
+- 代码注释与标识符风格，默认遵循当前代码文件已有风格。
+- 新增代码默认使用驼峰风格命名；只有在需要兼容第三方接口、Python 特定约定或历史 YAML 字段时例外。
+- 不要引用已经删除的旧目录结构，例如 `core/`、`engine/adapter/`、`engine/params/`、`engine/series/`。
+- 与 Claude 相关的草稿、计划、记忆文件，如果将来需要新增，统一放在 `.claude/` 下；但要先确认是否真的需要保留，避免再次堆积历史文档。
+- 目前不需要向后兼容，正在开发阶段。
 
 ## 项目定位
 
-hydroPilot 是一个**配置驱动**的水文模型实验编排框架，用于把外部模型运行、参数写入、结果提取、指标计算、目标/约束评估和结果记录，统一组织成一条可重复执行的流水线。
+HydroPilot 是一个配置优先的水文模型实验编排框架。它把以下能力组织成一条可重复执行的流水线：
 
-当前项目的核心定位是：
+- 参数空间定义与变换
+- 参数写入模型输入文件
+- 外部模型执行
+- 模拟结果序列提取
+- 指标 / 目标 / 约束 / 诊断计算
+- 运行记录与结果持久化
 
-- **general mode** 是真正的模型无关核心；
-- **template mode** 是对特定模型的配置展开层；
-- 当前仓库里唯一真正注册的内置模板是 **SWAT**；
-- APEX / HBV / VIC / HEC-HMS 等更适合表述为“计划支持”，不要写成“已经内置完成”。
+当前需要坚持的定位：
 
-## 当前源码结构（按真实目录，而不是旧设计稿）
+- `general` 是真正的模型无关核心模式
+- `template` 是模型特定的配置展开层
+- 当前唯一内置且已注册的模板是 `swat`
+- APEX / HBV / VIC / HEC-HMS 仍应视为规划中，而不是“已内置支持”
+
+## 当前目录结构
+
+当前真实源码结构如下：
 
 ```text
 src/hydro_pilot/
-  api/             # 对外入口，当前 SimModel 在这里
-  cli/             # 命令行入口，如 validate
-  config/          # 配置加载、路径解析、schema、RunConfig
-  engine/          # 运行期聚合逻辑（adapter / params / series / evaluation）
-  io/              # readers / writers / runners
-  models/          # 模板注册与模型知识，当前主要是 swat/
-  reporting/       # SQLite / CSV / error 日志持久化
-  validation/      # 面向用户的配置诊断入口
-  integrations/    # 外部优化框架集成，当前是 UQPyL
-  errors.py        # RunError 定义
+  api/           # 对外 API，当前主要是 SimModel
+  cli/           # 命令行入口，当前已有 hydropilot-validate
+  config/        # 配置加载、路径解析、schema、RunConfig
+  evaluation/    # FunctionManager 与标量评估
+  integrations/  # 外部优化框架适配，当前是 UQPyL
+  io/            # readers / writers / runners
+  models/        # 模板注册与模型特定知识，当前主要是 swat/
+  params/        # 参数空间、写入计划、写入应用
+  reporting/     # results.db / summary.csv / error 日志
+  runtime/       # Session / Workspace / Executor / Context
+  series/        # SeriesPlan / ObsStore / SeriesExtractor
+  validation/    # 面向用户的配置诊断入口
 ```
 
-补充说明：
+不要再把现在的结构描述成旧的：
 
-- `.claude/memory/project_design_decisions.md` 记录了当前最重要的非显然设计决策。
-- `.claude/memory/project_swat_reference.md` 记录了 SWAT 测试工程、文件格式和模板背景信息。
-- `.claude/memory/recommended_source_structure.md` 是**推荐演进蓝图**，不是当前已经完全落地的实际结构。
+- `core/`
+- `engine/evaluation`
+- `engine/params`
+- `engine/series`
+- `ModelAdapter`
+- `ParamManager`
 
-## 一条先看懂的运行链路
+这些都已经不是当前主结构。
 
-当前主流程可以概括为：
+## 一眼看懂的两条主链路
 
-`prepare_config / load_config`
-→ `RunConfig`
-→ `SimModel`
-→ `ModelAdapter`
-→ `ParamManager`
-→ `SubprocessRunner`
-→ `SeriesExtractor`
-→ `Evaluator`
-→ `RunReporter`
+### 1. 配置链路
 
-更具体地说：
+当前配置入口在 `src/hydro_pilot/config/loader.py`：
 
-1. `config.loader.prepare_config()` 负责读取 YAML、识别 `version`、在 template mode 下展开为 general raw dict，并做 general validation。
-2. `config.loader.load_config()` 把展开后的 raw dict 解析成 `RunConfig`。
-3. `api/sim_model.py` 中的 `SimModel` 负责创建运行目录、复制 `instance_*` 工作副本、调度批量评估、汇总错误和 reporter 生命周期。
-4. `engine/adapter/adapter.py` 中的 `ModelAdapter` 聚合四块能力：
-   - 参数变换/写入
-   - 模型执行
-   - 结果提取
-   - 评估计算
-5. `reporting/reporter.py` 异步消费运行记录，输出 `results.db`、`summary.csv`、`error.jsonl`、`error.log` 以及可选的系列 CSV。
+```text
+YAML
+  -> prepare_config()
+  -> template expansion (if version != general)
+  -> general validation
+  -> RunConfig
+```
 
-## 配置系统的真实规则
+关键事实：
 
-### 1. 两种配置入口
+- `version: general` 直接进入 general 校验与 `RunConfig`
+- `version: swat` 先做 SWAT 校验与展开，再转成 general raw dict
+- 模板展开后的 `<name>_general.yaml` 目前写在源 YAML 同目录，不是 `workPath`
 
-- `version: general`
-  - 直接使用标准 schema。
-- `version: swat`
-  - 先做 SWAT 专用校验与展开，再转成 general 配置。
+### 2. 运行时链路
 
-### 2. template 展开后的 general YAML 输出位置
+当前运行入口在 `src/hydro_pilot/api/sim_model.py`：
 
-当前实现中，template 展开后的 `<原文件名>_general.yaml` 会被写到**源 YAML 同目录**，不是 `workPath`。
+```text
+SimModel
+  -> Session
+  -> Workspace
+  -> Executor
+     -> ExecutionServices
+        -> FunctionManager
+        -> ParamSpace
+        -> ParamWritePlan
+        -> ParamApplier
+        -> SeriesPlan
+        -> ObsStore
+        -> SubprocessRunner
+        -> SeriesExtractor
+        -> Evaluator
+  -> RunReporter
+```
 
-如果后续修改行为，必须同步更新：
+职责拆分要点：
 
-- `config/loader.py` 的注释/文档；
-- README 中的说明；
-- 相关测试与示例。
+- `Session` 管生命周期：workspace、reporter、close、退出清理
+- `Workspace` 管运行目录与 instance 副本
+- `Executor` 管批量 evaluate 调度与单次 run 流程
+- `ExecutionServices` 负责装配各能力对象
+- `RunReporter` 异步落盘结果
 
-### 3. 参数链路
+## 参数链路
 
-当前参数层是两段式：
+当前参数层已经拆成了稳定的几块：
 
-- **design parameters**：优化器直接操作的 `X`
-- **physical parameters**：最终写入模型输入文件的 `P`
+- `ParamSpace`：面向优化器的设计变量信息
+- `ParamWritePlan`：把 physical 参数整理成按文件 / writer 归并的写入任务
+- `ParamApplier`：把一次 `X` 应用到运行目录中的目标文件
+- `transformer`：可选，把 design space 映射到 physical space
 
-主链路为：
+应按下面的理解来维护：
 
-`X -> Transformer -> physical vector P -> ParamManager -> writer tasks -> target files`
+```text
+X
+  -> transformer (optional)
+  -> P
+  -> ParamWritePlan
+  -> writer tasks
+  -> model input files
+```
 
-关键实现点：
+关键事实：
 
-- `ParametersSpec.transformer` 可选；未设置时，默认 `P == X`。
-- `P` 会自动注入运行上下文，不需要手工 cache。
-- writer 的组织粒度是**文件级任务**，不是“整个模型一个 writer”。
-- `ParamManager` 会先按 `(target_file, writer_type)` 注册写入任务，再在运行时把值分发给对应 writer。
-- 当前内置 writer 只有 `fixed_width`。
+- `design parameters` 是优化器看到的输入
+- `physical parameters` 是最终写入文件的参数
+- 当前内置 writer 只有 `fixed_width`
+- `writerType` 是稳定 schema，不要再移除
+- `P` 会写入运行上下文，供 reporter 使用
 
-### 4. series / derived / evaluation 规则
+## 序列链路
 
-当前评估上下文已经不再使用旧的 `expr` + `cache` 思路，而是：
+当前序列层已经拆成独立包：
 
-- `series.sim`：可以是 reader，也可以是 `call`
-- `series.obs`：只能是 reader
-- `derived`：统一通过 `call`
-- `functions`：分为 `builtin` 与 `external`
+- `SeriesPlan`：整理 series 定义
+- `ObsStore`：缓存 obs 数据
+- `SeriesExtractor`：提取 sim / obs，并处理 `series.sim.call`
 
-上下文 key 使用点号命名：
+关键规则：
 
-- `flow.sim`
-- `flow.obs`
-- `tn.sim`
+- `series.sim` 可以是 reader，也可以是 `call`
+- `series.obs` 只能是 reader
+- `derived` 统一通过 `call`
+- 上下文 key 使用点号命名，例如：
+  - `flow.sim`
+  - `flow.obs`
+  - `tn.sim`
 
-不要重新引入旧的下划线上下文命名，也不要重新引入 `expr`。
+不要重新引回旧的 `expr` 思路，也不要改回旧的下划线命名上下文。
 
-### 5. FunctionManager
+## validation 的现状
 
-`engine/evaluation/func_manager.py` 负责：
+当前用户可见的校验入口在：
 
-- 注册 builtin functions
-- 从外部 Python 文件加载 external functions
-- 校验 external function 的声明参数是否与函数签名兼容
+- `src/hydro_pilot/validation/general.py`
+- `src/hydro_pilot/models/swat/validate.py`
 
-当前内置函数包括：
+当前原则：
 
-- `NSE`
-- `KGE`
-- `R2`
-- `RMSE`
-- `MSE`
-- `PBIAS`
-- `LogNSE`
-- `sum_series`
+- general schema 校验放在 `validation/`
+- reader / writer 的具体字段校验仍由各自实现负责
+- `readerType` / `writerType` 缺失时，要尽早给出诊断
+- schema 改动时，至少同步：
+  - `config/schema/*`
+  - `validation/*`
+  - `examples/`
+  - `tests/`
 
-## 错误、warning 与 on_error 语义
+不要再新开一套第三套 validation 命名空间。
 
-这是当前项目里最容易被改坏的一块，修改 evaluator / reporter / sim_model 时必须先理解清楚。
+## 路径语义
 
-### 1. RunError 不是只有 fatal
+这是当前项目里非常重要、也很容易改坏的一点：
 
-`errors.py` 中的 `RunError` 带有：
+- `obs.file` 按配置文件目录解析
+- `sim.file` 按运行时工作目录 / project 副本解析
+
+也就是说，像 `output.rch` 这样的模拟输出，在配置里通常应写成运行时相对路径，而不是 YAML 相对路径。
+
+另外，`resolve_config_path()` 当前仍然直接依赖 `Path(path).is_absolute()`。这对非 Windows 环境下解析 `E:\\...` 这种路径并不稳妥。涉及跨平台路径行为时要特别谨慎。
+
+## error / warning / on_error 语义
+
+这部分不要轻易改。
+
+### RunError
+
+当前 `src/hydro_pilot/runtime/errors.py` 中的 `RunError` 支持：
 
 - `severity = "fatal"`
 - `severity = "warning"`
 
-warning 会进入 `context["warnings"]`，而不是通过抛异常中断整次运行。
+warning 会进入 `context["warnings"]`，不会直接中断整次运行。
 
-### 2. derived 的 fatal / warning 规则
+### on_error 默认值
 
-`Evaluator` 会在初始化阶段构建 `fatalDerivedIds`：
-
-- 如果某个 derived 被 objective 或 constraint 直接/间接依赖，那么它失败属于 **fatal**。
-- 如果某个 derived 只被 diagnostic 使用，那么它失败属于 **warning**，并回填 `NaN`。
-
-不要随意改这条规则，否则会直接改变优化问题的失败语义。
-
-### 3. on_error 默认值
-
-默认回填规则是：
+当前错误回填语义是：
 
 - objective: `min -> +inf`, `max -> -inf`
 - constraint: `+inf`
 - diagnostic: `NaN`
 
-### 4. clamp warning
+### derived 的 fatal / warning 区分
 
-writer 在写物理参数时如果发生硬边界截断，会按参数名聚合 warning，而不是每个文件报一条。
+如果某个 derived 被 objective / constraint 依赖，那么失败应被视为 fatal；如果只用于 diagnostic，则更适合 warning + `NaN` 回填。
 
-## Reporter 设计要点
+改 evaluator 时，必须先确认这套语义没有被破坏。
 
-`RunReporter` 当前是异步后台线程模型。
+## Reporter 现状
 
-主要输出：
+`RunReporter` 当前是异步后台线程模型，主要输出：
 
-- `backup/results.db`
-- `backup/summary.csv`
-- `backup/error.jsonl`
-- `backup/error.log`
+- `archive/results.db`
+- `archive/summary.csv`
+- `archive/error.jsonl`
+- `archive/error.log`
 - 可选的 series CSV
 
-关键点：
+维护时要记住：
 
-- reporter 与模型执行解耦；
-- CSV / DB 的 summary 字段顺序保持一致；
-- error 与 warning 都会被落盘，只是 severity 不同；
-- holding pen 允许慢任务稍后写出，因此 CSV 顺序不一定严格按提交顺序；
-- reporter 一旦崩溃，会通过 `_crash_event` 让主线程感知。
+- reporter 与执行流程解耦
+- warning 和 fatal 都会落盘，只是 severity 不同
+- 持久化字段顺序要保持稳定
+- reporter 崩溃后，主流程会感知到 submit 失败
 
-## SWAT 模板层目前的职责
+## SWAT 模板层职责
 
-`models/swat/` 当前是仓库里最完整的一组模型知识模块，职责包括：
+`src/hydro_pilot/models/swat/` 当前负责的是“把 SWAT 知识折叠进模板展开”，而不是承担通用运行时职责。
 
-- `template.py`
-  - 模板入口，把 `version: swat` 的简化配置转换成 general raw dict
-- `validate.py`
-  - SWAT 特定的前置校验
-- `discovery.py`
-  - 读取 `file.cio` / `fig.fig` / `.sub` / `.hru`，抽取项目元数据
-- `builder.py`
-  - 设计参数、物理参数、filter、location 展开
-- `series.py`
-  - SWAT 输出变量与行列位置解析
-- `library.py` / `swat_db.yaml` / `series_db.yaml`
-  - 参数与序列元数据库
+各模块大致职责：
 
-记住：SWAT 模板层的职责是“把 SWAT 知识折叠进配置展开”，而不是把通用运行逻辑写回主流程。
+- `template.py`：`version: swat` -> general raw dict
+- `validate.py`：SWAT 特定的前置校验
+- `discovery.py`：读取 SWAT 工程元数据
+- `builder.py`：参数展开与 physical 参数构建
+- `series.py`：SWAT 输出变量到 general series 的映射
+- `library.py` / `swat_db.yaml` / `series_db.yaml`：SWAT 参数与序列知识库
 
-## 当前最常用的命令
+如果以后增加新模板，优先在 `models/<model>/` 下扩展，而不是回头把模型知识塞进 runtime。
 
-### 安装
+## 当前公开入口
+
+当前公开 API / CLI 以这几个为准：
+
+- Python API:
+  - `from hydro_pilot import SimModel`
+  - `from hydro_pilot.integrations import UQPyLAdapter`
+- CLI:
+  - `hydropilot-validate`
+
+不要再使用旧 README 里那种路径：
+
+- `from hydro_pilot.sim_model import SimModel`
+- `from hydro_pilot.wrappers import UQPyLAdapter`
+
+## 常用命令
+
+安装：
 
 ```bash
 pip install -e .
 ```
 
-### 安装开发依赖
+安装开发依赖：
 
 ```bash
 pip install -e .[dev]
 ```
 
-### 安装 UQPyL 集成依赖
+安装 UQPyL 集成依赖：
 
 ```bash
 pip install -e .[uqpyl]
 ```
 
-### 运行全部测试
+运行全部测试：
 
 ```bash
 pytest
 ```
 
-### 运行配置校验相关测试
+运行配置校验测试：
 
 ```bash
 pytest tests/test_validate.py
 ```
 
-### 运行 SWAT 月尺度 IO 协议测试
+运行行为锁测试：
+
+```bash
+pytest tests/test_runtime_behavior_locks.py
+```
+
+运行月尺度 SWAT IO 协议测试：
 
 ```bash
 pytest tests/test_monthly_complex_io_protocol.py
 ```
 
-### 运行配置校验 CLI
+运行配置校验 CLI：
 
 ```bash
 hydropilot-validate path/to/config.yaml
@@ -264,111 +315,36 @@ hydropilot-validate path/to/config.yaml
 
 ## 修改代码时的优先原则
 
-### 1. 优先保持分层，而不是继续把逻辑塞回 SimModel
+### 1. 优先维护现有分层
 
-`SimModel` 现在已经同时承担了：
+新逻辑优先放到正确层里：
 
-- 配置加载
-- workspace 生命周期
-- instance 副本管理
-- 并行调度
-- reporter 生命周期
-- 终止信号清理
+- 模板知识 -> `models/`
+- reader / writer / runner -> `io/`
+- 参数写入组织 -> `params/`
+- 序列抽取 -> `series/`
+- 生命周期与调度 -> `runtime/`
 
-因此：
+不要再把逻辑回灌进一个“大而全”的入口对象。
 
-- 新的模型知识不要继续塞进 `SimModel`
-- 新的 reader / writer / runner 能力优先下沉到 registry 与 io 层
-- 新的模板行为优先放在 `models/<model>/` 下
+### 2. schema 改动必须联动
 
-### 2. 修改 schema 时，要联动三处
-
-任何配置字段变化，至少联动：
+只要 YAML 字段变化，至少检查：
 
 - `config/schema/*`
 - `validation/*`
-- `examples/` 与 `tests/fixtures/configs/`
+- `models/swat/*`（如果模板相关）
+- `examples/`
+- `tests/fixtures/`
+- README / 使用示例
 
-如果是 template mode 相关字段，还要联动：
+### 3. public API 改动必须成组处理
 
-- `models/<template>/validate.py`
-- `models/<template>/template.py`
-- 对应 builder / series / discovery 模块
+如果改了 import path、对外入口、README 示例、integration 入口，必须一起改，不要只修一个点。
 
-### 3. 修改 public API 时，不要只改一半
+### 4. 不要顺手做全局命名清洗
 
-当前仓库正处在一次结构迁移的中间态。凡是涉及 public import path、README 示例、integration 入口的修改，都必须成组处理。
-
-## 当前仓库里已经能看到的结构性坑点
-
-这些不是抽象建议，而是当前代码里已经存在的真实风险点。改动相关模块时要优先注意。
-
-### 1. public import surface 有路径漂移
-
-当前代码里至少有这些不一致：
-
-- `src/hydro_pilot/api/sim_model.py` 里使用了 `from ..adapter import ModelAdapter`，但实际 adapter 在 `engine/adapter/`
-- `src/hydro_pilot/integrations/__init__.py` 引用了不存在的 `uqpyl_adapter`
-- `src/hydro_pilot/integrations/uqpyl.py` 使用了 `from ..sim_model import SimModel`，但当前 `SimModel` 在 `api/sim_model.py`
-- README 里仍然写着旧导入路径：
-  - `from hydro_pilot.sim_model import SimModel`
-  - `from hydro_pilot.wrappers import UQPyLAdapter`
-
-如果要修这块，必须把：
-
-- 代码导入路径
-- `__init__.py` re-export
-- README 示例
-- 可能的测试覆盖
-
-一起修，不要只修单个文件。
-
-### 2. validation 是分层的，但还有命名过渡痕迹
-
-当前存在：
-
-- `src/hydro_pilot/validation/`
-- `src/hydro_pilot/config/validation/`（目前基本是空壳）
-
-如果继续重构校验层，要先决定：
-
-- 是把“用户可见诊断入口”稳定放在 `validation/`
-- 还是把它逐步并回 `config/validation/`
-
-在没有迁移计划前，不要继续复制出第三套 validation 命名空间。
-
-### 3. SWAT 项目发现与 schema 校验耦合得比较紧
-
-当前 `validate_swat_config()` 会先检查 `file.cio` / `fig.fig` 是否存在，再进入 SWAT series shortcut 校验。
-
-这意味着：
-
-- 本地没有真实 SWAT 工程时，很多更靠后的配置错误会被更早的路径错误掩盖；
-- CI / 跨平台环境里，Windows 风格路径很容易直接触发 projectPath 失败；
-- 某些测试会因为 discovery 前置而拿不到更精确的字段级诊断。
-
-如果后续重构 validation，优先考虑分成：
-
-- schema / syntax 级校验
-- template semantic 校验
-- project discovery 校验
-
-而不是全部揉在一个入口里。
-
-### 4. 路径处理需要特别注意跨平台行为
-
-当前 `resolve_config_path()` 直接使用 `Path(path)` 判断绝对路径。在非 Windows 环境里，像 `E:\DJBasin\TxtInOutFSB` 这样的字符串不会被识别成绝对路径，最终会被错误拼到 YAML 所在目录下。
-
-这会影响：
-
-- SWAT 测试配置
-- 示例配置
-- template validation
-- 任何需要兼容 Windows 样例路径的 CI 场景
-
-### 5. 当前风格是“历史 camelCase + Python snake_case 混用”
-
-不要在一次普通功能提交里顺手做全局命名风格清洗。当前仓库已有很多历史字段与方法名直接对齐 YAML：
+当前仓库仍然是 YAML 历史字段与 Python 命名混用，例如：
 
 - `projectPath`
 - `workPath`
@@ -377,60 +353,31 @@ hydropilot-validate path/to/config.yaml
 - `flushInterval`
 - `holdingPenLimit`
 
-因此更安全的做法是：
+除非是明确的专项重构，否则不要在普通功能提交里顺手全仓统一命名风格。
 
-- 修改已有模块时，优先保持附近代码风格一致；
-- 只有在用户明确要求时，才做大规模命名规范化。
+## 推荐阅读顺序
 
-## 推荐的工作方式
-
-### 当你要新增一个模型模板时
-
-优先新增：
-
-- `models/<model>/template.py`
-- `models/<model>/validate.py`
-- `models/<model>/builder.py`
-- `models/<model>/series.py`
-- 对应的 library / yaml db
-
-不要先去改 `SimModel` 主链路。
-
-### 当你要新增一个文件格式 reader / writer 时
-
-优先新增：
-
-- `io/readers/<type>.py` 或 `io/writers/<type>.py`
-- 对应 registry 注册
-- validation 覆盖
-- 最小 example / test
-
-不要在现有 reader / writer 里塞满 `if file_type == ...` 分支。
-
-### 当你要改 evaluation 语义时
-
-必须先检查：
-
-- `Evaluator.fatalDerivedIds`
-- `on_error` 默认值
-- reporter 如何记录 warning / fatal
-- 示例配置与测试是否仍表达相同语义
-
-## 建议优先阅读的文件
-
-当需要快速进入项目时，按这个顺序看：
+要快速理解项目，建议按这个顺序看：
 
 1. `src/hydro_pilot/api/sim_model.py`
 2. `src/hydro_pilot/config/loader.py`
 3. `src/hydro_pilot/config/schema/run_config.py`
-4. `src/hydro_pilot/engine/adapter/adapter.py`
-5. `src/hydro_pilot/engine/params/manager.py`
-6. `src/hydro_pilot/engine/series/extractor.py`
-7. `src/hydro_pilot/engine/evaluation/evaluator.py`
-8. `src/hydro_pilot/reporting/reporter.py`
-9. `src/hydro_pilot/models/swat/template.py`
-10. `.claude/memory/project_design_decisions.md`
+4. `src/hydro_pilot/runtime/session.py`
+5. `src/hydro_pilot/runtime/executor.py`
+6. `src/hydro_pilot/runtime/services.py`
+7. `src/hydro_pilot/params/write_plan.py`
+8. `src/hydro_pilot/series/extractor.py`
+9. `src/hydro_pilot/evaluation/evaluator.py`
+10. `src/hydro_pilot/reporting/reporter.py`
+11. `src/hydro_pilot/models/swat/template.py`
 
-## 当前判断项目状态时的一句话总结
+## 一句话总结当前项目状态
 
-这个仓库已经从“围绕单一模型脚本化拼装”的阶段，走到了“以 general schema 为核心、以 template 封装模型知识、以 reporter 保证运行记录、以 validation 提供用户反馈”的框架阶段；但它仍处于一次结构整理的中间态，尤其是 **public import surface、validation 分层、路径跨平台处理** 这三块，后续改动时要格外谨慎。
+这个仓库已经从“围绕单模型脚本堆叠”的阶段，进入了“以 general schema 为核心、以 template 承载模型知识、以 runtime 编排执行、以 reporter 记录结果、以 validation 提供反馈”的框架阶段。
+
+接下来最重要的，不是再发明新的中间层，而是持续让：
+
+- 结构更稳定
+- 入口更清晰
+- 路径与校验语义更一致
+- 对外文档和真实代码保持同步

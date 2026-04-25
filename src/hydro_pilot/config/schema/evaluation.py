@@ -93,78 +93,60 @@ class DiagnosticSpec(RefItemSpec):
 
 
 class ObjectiveBlock(ConfigNode):
-    use: List[str]
-    items: Dict[str, ObjectiveSpec]
+    items: List[ObjectiveSpec]
 
     @classmethod
-    def from_raw(cls, raw: Dict[str, Any]) -> "ObjectiveBlock":
-        if not isinstance(raw, dict):
-            raw = {}
-        items_raw = raw.get("items", [])
-        if not isinstance(items_raw, list):
-            raise ValueError("objectives.items must be a list")
-        items: Dict[str, ObjectiveSpec] = {}
-        for item_raw in items_raw:
+    def from_raw(cls, raw: Any) -> "ObjectiveBlock":
+        if raw is None:
+            raw = []
+        if not isinstance(raw, list):
+            raise ValueError("objectives must be a list")
+        items: List[ObjectiveSpec] = []
+        seen: set[str] = set()
+        for item_raw in raw:
             item = ObjectiveSpec.from_raw(item_raw)
-            if item.id in items:
+            if item.id in seen:
                 raise ValueError(f"Duplicate objective id: {item.id}")
-            items[item.id] = item
-        use = raw.get("use", list(items.keys()))
-        if not isinstance(use, list):
-            raise ValueError("objectives.use must be a list")
-        for oid in use:
-            if oid not in items:
-                raise ValueError(f"objectives.use references unknown objective id: {oid}")
-        return cls.model_validate({"use": use, "items": items})
+            seen.add(item.id)
+            items.append(item)
+        return cls.model_validate({"items": items})
 
 
 class ConstraintBlock(ConfigNode):
-    use: List[str]
-    items: Dict[str, ConstraintSpec]
+    items: List[ConstraintSpec]
 
     @classmethod
-    def from_raw(cls, raw: Dict[str, Any]) -> "ConstraintBlock":
-        if not isinstance(raw, dict):
-            raw = {}
-        items_raw = raw.get("items", [])
-        if not isinstance(items_raw, list):
-            raise ValueError("constraints.items must be a list")
-        items: Dict[str, ConstraintSpec] = {}
-        for item_raw in items_raw:
+    def from_raw(cls, raw: Any) -> "ConstraintBlock":
+        if raw is None:
+            raw = []
+        if not isinstance(raw, list):
+            raise ValueError("constraints must be a list")
+        items: List[ConstraintSpec] = []
+        seen: set[str] = set()
+        for item_raw in raw:
             item = ConstraintSpec.from_raw(item_raw)
-            if item.id in items:
+            if item.id in seen:
                 raise ValueError(f"Duplicate constraint id: {item.id}")
-            items[item.id] = item
-        use = raw.get("use", list(items.keys()))
-        if not isinstance(use, list):
-            raise ValueError("constraints.use must be a list")
-        for cid in use:
-            if cid not in items:
-                raise ValueError(f"constraints.use references unknown constraint id: {cid}")
-        return cls.model_validate({"use": use, "items": items})
+            seen.add(item.id)
+            items.append(item)
+        return cls.model_validate({"items": items})
 
 
 class DiagnosticBlock(ConfigNode):
-    use: List[str]
-    items: Dict[str, DiagnosticSpec]
+    items: List[DiagnosticSpec]
 
     @classmethod
-    def from_raw(cls, raw: Dict[str, Any]) -> "DiagnosticBlock":
-        if not isinstance(raw, dict):
-            raw = {}
-        items_raw = raw.get("items", [])
-        if not isinstance(items_raw, list):
-            raise ValueError("diagnostics.items must be a list")
-        items: Dict[str, DiagnosticSpec] = {}
-        for item_raw in items_raw:
+    def from_raw(cls, raw: Any) -> "DiagnosticBlock":
+        if raw is None:
+            raw = []
+        if not isinstance(raw, list):
+            raise ValueError("diagnostics must be a list")
+        items: List[DiagnosticSpec] = []
+        seen: set[str] = set()
+        for item_raw in raw:
             item = DiagnosticSpec.from_raw(item_raw)
-            if item.id in items:
+            if item.id in seen:
                 raise ValueError(f"Duplicate diagnostic id: {item.id}")
-            items[item.id] = item
-        use = raw.get("use", list(items.keys()))
-        if not isinstance(use, list):
-            raise ValueError("diagnostics.use must be a list")
-        for did in use:
-            if did not in items:
-                raise ValueError(f"diagnostics.use references unknown diagnostic id: {did}")
-        return cls.model_validate({"use": use, "items": items})
+            seen.add(item.id)
+            items.append(item)
+        return cls.model_validate({"items": items})

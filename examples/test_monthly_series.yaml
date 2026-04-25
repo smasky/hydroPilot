@@ -80,20 +80,21 @@ derived:
       args: [flow_month.sim, flow_date.sim]
 
 objectives:
-  items:
-    - id: obj_nse
-      desc: "Maximize NSE"
-      ref: nse_flow_month
-      sense: max
+  - id: obj_nse
+    desc: "Maximize NSE"
+    ref: nse_flow_month
+    sense: max
 
 diagnostics:
-  items:
-    - id: diag_rmse
-      name: "RMSE flow"
-      ref: rmse_flow_month
-    - id: diag_flow_times_two
-      name: "Flow times two"
-      ref: flow_month_times_two
-    - id: diag_period_equal
-      name: "Period series equal"
-      ref: period_series_equal
+  - id: diag_rmse
+    name: "RMSE flow"
+    ref: rmse_flow_month
+  - id: diag_flow_times_two
+    name: "Flow times two"
+    ref: flow_month_times_two
+  - id: diag_period_equal
+    name: "Period series equal"
+    ref: period_series_equal
+
+
+

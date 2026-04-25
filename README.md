@@ -116,8 +116,8 @@ X = np.array([
 ])
 
 with SimModel("examples/test_monthly.yaml") as model:
-    result = model.evaluate(X)
-    print(result["objs"])
+    result = model.run(X)
+    print(result.objs)
 ```
 
 ### Use with UQPyL
@@ -164,13 +164,15 @@ series:
       readerType: text
       file:
         name: model.out
-        rowRanges: [[1, 365]]
+        rowRanges:
+          - [1, 365]
         colNum: 2
     obs:
       readerType: text
       file:
         name: obs_flow.txt
-        rowRanges: [[1, 365]]
+        rowRanges:
+          - [1, 365]
         colNum: 2
 
 functions:
@@ -184,10 +186,9 @@ derived:
       args: [flow.sim, flow.obs]
 
 objectives:
-  items:
-    - id: obj_nse
-      ref: nse_flow
-      sense: max
+  - id: obj_nse
+    ref: nse_flow
+    sense: max
 ```
 
 ## Template example
@@ -228,7 +229,8 @@ series:
       colSpan: [50, 61]
     obs:
       file: obs_flow_monthly.txt
-      rowRanges: [[1, 36]]
+      rowRanges:
+        - [1, 36]
       colSpan: [1, 12]
 
 functions:
@@ -242,10 +244,9 @@ derived:
       args: [flow.sim, flow.obs]
 
 objectives:
-  items:
-    - id: obj_nse
-      ref: nse_flow
-      sense: max
+  - id: obj_nse
+    ref: nse_flow
+    sense: max
 ```
 
 ## Path semantics
@@ -261,6 +262,9 @@ So if your model produces `output.rch` inside the run workspace, the config shou
 sim:
   readerType: text
   file: output.rch
+  rowRanges:
+    - [1, 365]
+  colNum: 1
 ```
 
 not as a path relative to the YAML file location.
@@ -345,7 +349,7 @@ External Python functions are also supported.
 
 ## Outputs and run records
 
-Each run creates an isolated runtime workspace plus a backup area. Depending on the config and execution path, outputs can include:
+Each run creates an isolated runtime workspace plus an archive area. Depending on the config and execution path, outputs can include:
 
 - original config copy
 - resolved general config copy
@@ -405,3 +409,6 @@ Commands such as `run` and `expand` are still better treated as roadmap items un
 ## Project summary
 
 HydroPilot already has a usable orchestration core and a real SWAT integration. The next step is not reinventing the runtime again, but making the framework easier to understand, easier to extend, and easier to adopt.
+
+
+

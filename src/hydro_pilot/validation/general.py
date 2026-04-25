@@ -32,7 +32,6 @@ def validate_general_config(raw: dict[str, Any], base_path: Path) -> list[Diagno
     diagnostics.extend(_validate_general_parameters(raw))
     diagnostics.extend(_validate_general_series(raw, base_path))
     diagnostics.extend(_validate_general_functions(raw, base_path))
-    diagnostics.extend(_validate_general_dependencies(raw))
 
     if has_error(diagnostics):
         return diagnostics
@@ -208,10 +207,6 @@ def _validate_general_functions(raw: dict[str, Any], base_path: Path) -> list[Di
             if file_path is None or not file_path.exists():
                 diagnostics.append(error(path, f"external function file not found: {func['file']}"))
     return diagnostics
-
-
-def _validate_general_dependencies(raw: dict[str, Any]) -> list[Diagnostic]:
-    return []
 
 
 def _run_general_fallback(raw: dict[str, Any], base_path: Path) -> list[Diagnostic]:

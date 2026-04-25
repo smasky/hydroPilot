@@ -18,20 +18,8 @@ class Session:
         pLabels = []
         if self.cfg.parameters.transformer:
             pLabels = [p.name for p in self.cfg.parameters.physical]
-        self.nInput = self.executor.nInput
-        self.xLabels = self.executor.xLabels
-        self.varType = self.executor.varType
-        self.varSet = self.executor.varSet
-        self.ub = self.executor.ub
-        self.lb = self.executor.lb
-        self.nOutput = self.executor.nOutput
-        self.optType = self.executor.optType
-        self.nConstraints = self.executor.nConstraints
-        self.optSign = self.executor.optSign
-        self.runPath = self.workspace.runPath
-        self.backupPath = self.workspace.backupPath
 
-        self.reporter = RunReporter(self.workspace.backupPath, self.xLabels, pLabels, self.cfg)
+        self.reporter = RunReporter(self.workspace.archivePath, self.xLabels, pLabels, self.cfg)
         self.reporter.start()
         self.executor.reporter = self.reporter
 
@@ -42,8 +30,56 @@ class Session:
         except Exception:
             pass
 
-    def evaluate(self, X):
-        return self.executor.evaluate(X)
+    @property
+    def nInput(self):
+        return self.executor.nInput
+
+    @property
+    def xLabels(self):
+        return self.executor.xLabels
+
+    @property
+    def varType(self):
+        return self.executor.varType
+
+    @property
+    def varSet(self):
+        return self.executor.varSet
+
+    @property
+    def ub(self):
+        return self.executor.ub
+
+    @property
+    def lb(self):
+        return self.executor.lb
+
+    @property
+    def nOutput(self):
+        return self.executor.nOutput
+
+    @property
+    def optType(self):
+        return self.executor.optType
+
+    @property
+    def nConstraints(self):
+        return self.executor.nConstraints
+
+    @property
+    def optSign(self):
+        return self.executor.optSign
+
+    @property
+    def runPath(self):
+        return self.workspace.runPath
+
+    @property
+    def archivePath(self):
+        return self.workspace.archivePath
+
+    def run(self, X):
+        return self.executor.run(X)
 
     def close(self):
         if self._closed:
@@ -54,11 +90,12 @@ class Session:
                 self.reporter.close()
             except Exception as e:
                 print(f"[Session.close] reporter.close() failed: {e}")
-        try:
-            self.workspace.cleanup_instances()
-        except Exception as e:
-            print(f"[Session.close] instance cleanup failed: {e}")
-            print("Please clean instance folders manually if needed.")
+        if not self.cfg.basic.keepInstances:
+            try:
+                self.workspace.cleanup_instances()
+            except Exception as e:
+                print(f"[Session.close] instance cleanup failed: {e}")
+                print("Please clean instance folders manually if needed.")
 
     def __enter__(self):
         return self

@@ -68,12 +68,5 @@ class SwatTemplate(ModelTemplate):
         )
         raw["parameters"] = paramsResult
 
-        # Ensure reporter block exists in output
-        if "reporter" not in raw or not isinstance(raw["reporter"], dict):
-            raw["reporter"] = {}
-        raw["reporter"].setdefault("flushInterval", 50)
-        raw["reporter"].setdefault("holdingPenLimit", 20)
-        raw["reporter"].setdefault("series", [])
-
         raw["version"] = "general"
         return raw

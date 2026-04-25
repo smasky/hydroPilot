@@ -116,8 +116,8 @@ X = np.array([
 ])
 
 with SimModel("examples/test_monthly.yaml") as model:
-    result = model.evaluate(X)
-    print(result["objs"])
+    result = model.run(X)
+    print(result.objs)
 ```
 
 ### 与 UQPyL 配合使用
@@ -133,7 +133,7 @@ with UQPyLAdapter("examples/test_daily.yaml") as problem:
 
 ## 最小 general 示例
 
-下面这个例子比旧草稿更贴近当前真实 schema：
+下面这个例子 schema：
 
 ```yaml
 version: general
@@ -164,13 +164,15 @@ series:
       readerType: text
       file:
         name: model.out
-        rowRanges: [[1, 365]]
+        rowRanges:
+          - [1, 365]
         colNum: 2
     obs:
       readerType: text
       file:
         name: obs_flow.txt
-        rowRanges: [[1, 365]]
+        rowRanges:
+          - [1, 365]
         colNum: 2
 
 functions:
@@ -184,10 +186,9 @@ derived:
       args: [flow.sim, flow.obs]
 
 objectives:
-  items:
-    - id: obj_nse
-      ref: nse_flow
-      sense: max
+  - id: obj_nse
+    ref: nse_flow
+    sense: max
 ```
 
 ## 模板示例
@@ -228,7 +229,8 @@ series:
       colSpan: [50, 61]
     obs:
       file: obs_flow_monthly.txt
-      rowRanges: [[1, 36]]
+      rowRanges:
+        - [1, 36]
       colSpan: [1, 12]
 
 functions:
@@ -242,10 +244,9 @@ derived:
       args: [flow.sim, flow.obs]
 
 objectives:
-  items:
-    - id: obj_nse
-      ref: nse_flow
-      sense: max
+  - id: obj_nse
+    ref: nse_flow
+    sense: max
 ```
 
 ## 路径语义
@@ -345,7 +346,7 @@ src/hydro_pilot/
 
 ## 输出与运行记录
 
-每次运行都会创建独立的 runtime workspace 和 backup 目录。根据配置和执行路径，产物可能包括：
+每次运行都会创建独立的 runtime workspace 和 archive 目录。根据配置和执行路径，产物可能包括：
 
 - 原始配置副本
 - 展开后的 general 配置副本
@@ -405,3 +406,6 @@ src/hydro_pilot/
 ## 项目总结
 
 HydroPilot 已经拥有一套可用的编排核心，也已经有了真正可运行的 SWAT 集成。下一步更关键的，不是再重新发明运行时，而是让这个框架更容易理解、更容易扩展，也更容易被别人拿来直接用。
+
+
+

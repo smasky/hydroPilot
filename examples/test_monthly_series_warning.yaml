@@ -53,11 +53,13 @@ derived:
       args: [flow_month.sim, flow_month.obs]
 
 objectives:
-  items:
-    - id: obj_nse
-      desc: "Maximize NSE"
-      ref: nse_flow_month
-      sense: max
+  - id: obj_nse
+    desc: "Maximize NSE"
+    ref: nse_flow_month
+    sense: max
 
 reporter:
   flushInterval: 1
+
+
+

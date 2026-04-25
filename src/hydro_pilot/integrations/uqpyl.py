@@ -20,7 +20,8 @@ class UQPyLAdapter(Problem):
         )
 
     def evaluate(self, X):
-        return self.model.evaluate(X)
+        result = self.model.run(X)
+        return {"objs": result.objs, "cons": result.cons}
 
     def objFunc(self, X):
         return self.evaluate(X)["objs"]

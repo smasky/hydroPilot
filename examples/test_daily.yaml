@@ -46,8 +46,10 @@ derived:
       args: [flow.sim, flow.obs]
 
 objectives:
-  items:
-    - id: obj_nse
-      desc: "Maximize NSE"
-      ref: nse_flow
-      sense: max
+  - id: obj_nse
+    desc: "Maximize NSE"
+    ref: nse_flow
+    sense: max
+
+
+

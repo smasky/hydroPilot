@@ -107,14 +107,14 @@ def test_sim_model():
         print(f"\n  Test X (midpoint): {X[0]}")
 
         print("\n  Running evaluation (SWAT monthly)...")
-        result = model.evaluate(X)
-        objs = result["objs"]
+        result = model.run(X)
+        objs = result.objs
         print(f"  Objectives shape: {objs.shape}")
         print(f"  NSE_flow = {objs[0, 0]:.6f}")
         print(f"  NSE_TN   = {objs[0, 1]:.6f}")
 
-        if result["cons"] is not None:
-            print(f"  Constraints: {result['cons']}")
+        if result.cons is not None:
+            print(f"  Constraints: {result.cons}")
         else:
             print("  Constraints: None (no constraints defined)")
 

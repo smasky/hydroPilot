@@ -63,13 +63,14 @@ def load_config(path: Union[str, Path]) -> RunConfig:
     corresponding ModelTemplate to transform simplified config
     into a standard RunConfig.
 
-    When a template expands a simplified config, the resolved
-    general config is automatically written to
+    The resolved general config is automatically written to
     ``<workPath>/<original_name>_general.yaml`` for user inspection.
     """
     prepared = prepare_config(path)
-    if prepared.version != "general":
-        _dump_resolved_config(prepared.expanded_raw, prepared.yaml_file)
+    _dump_resolved_config(
+        _config_to_user_dict(prepared.config, prepared.expanded_raw),
+        prepared.yaml_file,
+    )
     return prepared.config
 
 
@@ -173,6 +174,113 @@ def _dump_resolved_config(raw: dict, source_file: Path) -> None:
             sort_keys=False,
             indent=2,
         )
+
+
+def _config_to_user_dict(cfg: RunConfig, source_raw: dict[str, Any]) -> dict[str, Any]:
+    data = {
+        "version": "general",
+        "basic": _basic_to_dict(cfg.basic),
+        "parameters": _parameters_to_dict(cfg.parameters),
+        "series": [_series_to_dict(item) for item in cfg.series],
+        "objectives": _ref_block_to_list(cfg.objectives),
+        "reporter": _model_public_dict(cfg.reporter),
+    }
+
+    functions = [_function_to_dict(item) for item in cfg.functions.values()]
+    derived = [_derived_to_dict(item) for item in cfg.derived]
+    constraints = _ref_block_to_list(cfg.constraints)
+    diagnostics = _ref_block_to_list(cfg.diagnostics)
+
+    if "functions" in source_raw or functions:
+        data["functions"] = functions
+    if "derived" in source_raw or derived:
+        data["derived"] = derived
+    if "constraints" in source_raw or constraints:
+        data["constraints"] = constraints
+    if "diagnostics" in source_raw or diagnostics:
+        data["diagnostics"] = diagnostics
+
+    return data
+
+
+def _basic_to_dict(basic) -> dict[str, Any]:
+    return {
+        "projectPath": _path_to_str(basic.projectPath),
+        "workPath": _path_to_str(basic.workPath),
+        "command": basic.command,
+        "timeout": basic.timeout,
+        "parallel": basic.parallel,
+        "keepInstances": basic.keepInstances,
+    }
+
+
+def _parameters_to_dict(parameters) -> dict[str, Any]:
+    return {
+        "design": [_model_public_dict(item) for item in parameters.design],
+        "physical": [_model_public_dict(item) for item in parameters.physical],
+        "hardBound": parameters.hardBound,
+        "transformer": parameters.transformer,
+    }
+
+
+def _series_to_dict(series) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "id": series.id,
+        "desc": series.name,
+        "sim": _series_endpoint_to_dict(series.sim),
+        "size": series.size,
+    }
+    if series.obs is not None:
+        data["obs"] = _series_endpoint_to_dict(series.obs)
+    return data
+
+
+def _series_endpoint_to_dict(endpoint) -> dict[str, Any]:
+    if hasattr(endpoint, "raw"):
+        raw = _normalize_plain(endpoint.raw)
+        raw.setdefault("readerType", endpoint.readerType)
+        return raw
+    return {"call": _model_public_dict(endpoint)}
+
+
+def _function_to_dict(function) -> dict[str, Any]:
+    data = _model_public_dict(function)
+    if data.get("file") is None:
+        data.pop("file", None)
+    return data
+
+
+def _derived_to_dict(derived) -> dict[str, Any]:
+    return {
+        "id": derived.id,
+        "desc": derived.desc,
+        "call": _model_public_dict(derived.call),
+    }
+
+
+def _ref_block_to_list(block) -> list[dict[str, Any]]:
+    return [_model_public_dict(item) for item in block.items]
+
+
+def _model_public_dict(model) -> dict[str, Any]:
+    raw = model.model_dump(by_alias=False, exclude_none=False)
+    return _normalize_plain(raw)
+
+
+def _normalize_plain(value):
+    if isinstance(value, Path):
+        return _path_to_str(value)
+    if isinstance(value, dict):
+        return {k: _normalize_plain(v) for k, v in value.items()}
+    if isinstance(value, tuple):
+        return [_normalize_plain(v) for v in value]
+    if isinstance(value, list):
+        return [_normalize_plain(v) for v in value]
+    return value
+
+
+def _path_to_str(path: Path) -> str:
+    return str(path)
 
 
 def _make_compact_dumper():

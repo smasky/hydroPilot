@@ -17,8 +17,8 @@ def main():
         lb = np.array(model.lb)
         ub = np.array(model.ub)
         X = ((lb + ub) / 2).reshape(1, -1)
-        result = model.evaluate(X)
-        print(result["objs"])
+        result = model.run(X)
+        print(result.objs)
         print(model.backupPath)
     finally:
         if model is not None:

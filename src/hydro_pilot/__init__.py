@@ -1,3 +1,3 @@
-from .api import SimModel
+from .api import BatchRunResult, SimModel
 
-__all__ = ["SimModel"]
+__all__ = ["SimModel", "BatchRunResult"]

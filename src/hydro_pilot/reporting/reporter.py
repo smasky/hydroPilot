@@ -21,18 +21,18 @@ from .storage import flush_buffers, setup_storage, write_error_log, write_jsonl
 
 
 class RunReporter:
-    def __init__(self, backupPath, xLabels, pLabels, cfg):
+    def __init__(self, archivePath, xLabels, pLabels, cfg):
         self.cfg = cfg
-        self.backupPath = Path(backupPath)
-        self.backupPath.mkdir(parents=True, exist_ok=True)
+        self.archivePath = Path(archivePath)
+        self.archivePath.mkdir(parents=True, exist_ok=True)
 
         self.xLabels = sanitize_labels(xLabels)
         self.pLabels = sanitize_labels(pLabels) if pLabels else []
 
-        self.dbPath = self.backupPath / "results.db"
-        self.summaryCsv = self.backupPath / "summary.csv"
-        self.errorJsonl = self.backupPath / "error.jsonl"
-        self.errorLog = self.backupPath / "error.log"
+        self.dbPath = self.archivePath / "results.db"
+        self.summaryCsv = self.archivePath / "summary.csv"
+        self.errorJsonl = self.archivePath / "error.jsonl"
+        self.errorLog = self.archivePath / "error.log"
 
         self._parseIds()
         self.startRunId = 1
@@ -130,7 +130,7 @@ class RunReporter:
             )
 
             for sk in self.outSeriesIds:
-                f = open(self.backupPath / f"{sk}.csv", "a", newline="", encoding="utf-8-sig")
+                f = open(self.archivePath / f"{sk}.csv", "a", newline="", encoding="utf-8-sig")
                 import csv as _csv
                 seriesCsvHandlers[sk] = {"file": f, "writer": _csv.writer(f), "headerWritten": f.tell() > 0}
 
@@ -351,4 +351,3 @@ class RunReporter:
         jsonlFile.flush()
         logFile.flush()
         conn.commit()
-

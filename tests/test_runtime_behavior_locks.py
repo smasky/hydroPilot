@@ -12,15 +12,34 @@ if str(SRC) not in sys.path:
 
 from hydro_pilot.runtime.context import apply_on_error_defaults
 from hydro_pilot.runtime.errors import RunError
+from hydro_pilot.runtime import Executor, Session
 from hydro_pilot.evaluation import Evaluator
 from hydro_pilot.params import ParamApplier, ParamSpace, ParamWritePlan
 from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan
+from hydro_pilot.api import BatchRunResult
 from hydro_pilot.reporting.records import build_csv_fields, collect_error_entries, parse_report_ids
+from hydro_pilot.config.schema.parameters import ParametersSpec
 from hydro_pilot.config.schema.series import ReaderSpec
 
 
 def _ns(**kwargs):
     return SimpleNamespace(**kwargs)
+
+
+class _CloseReporter:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+class _CleanupWorkspace:
+    def __init__(self):
+        self.cleanup_count = 0
+
+    def cleanup_instances(self):
+        self.cleanup_count += 1
 
 
 def _fixed_width_param(name, start, file_name, bounds=(0.0, 10.0)):
@@ -40,14 +59,18 @@ def _fixed_width_param(name, start, file_name, bounds=(0.0, 10.0)):
 
 
 def _make_param_cfg(project_path, design, physical, transformer=None, hard_bound=True):
+    parameters = ParametersSpec.from_raw(
+        {
+            "design": design,
+            "physical": physical,
+            "transformer": transformer,
+            "hardBound": hard_bound,
+        },
+        project_path,
+    )
     return _ns(
         basic=_ns(projectPath=str(project_path)),
-        parameters=_ns(
-            design=design,
-            physical=physical,
-            transformer=transformer,
-            hardBound=hard_bound,
-        ),
+        parameters=parameters,
     )
 
 
@@ -81,6 +104,32 @@ def test_param_manager_locks_design_to_physical_transform_result(tmp_path: Path)
 
     assert space.get_param_info()[0] == 2
     assert applier.get_physical_params([1.0, 2.0]).tolist() == [11.0, 22.0]
+
+
+def test_session_close_cleans_instances_by_default():
+    session = Session.__new__(Session)
+    session._closed = False
+    session.cfg = _ns(basic=_ns(keepInstances=False))
+    session.reporter = _CloseReporter()
+    session.workspace = _CleanupWorkspace()
+
+    Session.close(session)
+
+    assert session.reporter.closed is True
+    assert session.workspace.cleanup_count == 1
+
+
+def test_session_close_keeps_instances_when_requested():
+    session = Session.__new__(Session)
+    session._closed = False
+    session.cfg = _ns(basic=_ns(keepInstances=True))
+    session.reporter = _CloseReporter()
+    session.workspace = _CleanupWorkspace()
+
+    Session.close(session)
+
+    assert session.reporter.closed is True
+    assert session.workspace.cleanup_count == 0
 
 
 def test_param_manager_locks_clamp_warning_aggregation(tmp_path: Path):
@@ -170,11 +219,10 @@ def test_sim_reader_spec_keeps_runtime_relative_file_path(tmp_path: Path):
 
 def test_evaluator_locks_nonfatal_derived_failures_to_warning_and_nan():
     cfg = _ns(
-        objectives=_ns(use=[], items={}),
-        constraints=_ns(use=[], items={}),
+        objectives=_ns(items=[]),
+        constraints=_ns(items=[]),
         diagnostics=_ns(
-            use=["diag_only"],
-            items={"diag_only": _ns(ref="derived_only", on_error=-999.0)},
+            items=[_ns(id="diag_only", ref="derived_only", on_error=-999.0)],
         ),
         derived=[
             _ns(id="derived_only", call=_ns(func="calc", args=["missing.sim"])),
@@ -199,11 +247,10 @@ def test_evaluator_locks_nonfatal_derived_failures_to_warning_and_nan():
 def test_evaluator_locks_fatal_derived_failures_for_objective_dependency():
     cfg = _ns(
         objectives=_ns(
-            use=["obj_flow"],
-            items={"obj_flow": _ns(ref="derived_needed", sense="min", on_error=np.inf)},
+            items=[_ns(id="obj_flow", ref="derived_needed", sense="min", on_error=np.inf)],
         ),
-        constraints=_ns(use=[], items={}),
-        diagnostics=_ns(use=[], items={}),
+        constraints=_ns(items=[]),
+        diagnostics=_ns(items=[]),
         derived=[
             _ns(id="derived_needed", call=_ns(func="calc", args=["missing.sim"])),
         ],
@@ -221,9 +268,9 @@ def test_evaluator_locks_fatal_derived_failures_for_objective_dependency():
 
 def test_context_locks_on_error_default_backfill():
     cfg = _ns(
-        objectives=_ns(use=["obj"], items={"obj": _ns(on_error=-1.0)}),
-        constraints=_ns(use=["con"], items={"con": _ns(on_error=999.0)}),
-        diagnostics=_ns(use=["diag"], items={"diag": _ns(on_error=np.nan)}),
+        objectives=_ns(items=[_ns(id="obj", on_error=-1.0)]),
+        constraints=_ns(items=[_ns(id="con", on_error=999.0)]),
+        diagnostics=_ns(items=[_ns(id="diag", on_error=np.nan)]),
     )
     context = {}
 
@@ -237,9 +284,9 @@ def test_context_locks_on_error_default_backfill():
 def test_reporting_records_lock_summary_field_order_and_error_entry_semantics():
     cfg = _ns(
         series_index={"flow": object(), "sed": object()},
-        objectives=_ns(use=["obj_b", "obj_a"]),
-        constraints=_ns(use=["con_a"]),
-        diagnostics=_ns(use=["diag_b", "diag_a"]),
+        objectives=_ns(items=[_ns(id="obj_b"), _ns(id="obj_a")]),
+        constraints=_ns(items=[_ns(id="con_a")]),
+        diagnostics=_ns(items=[_ns(id="diag_b"), _ns(id="diag_a")]),
         derived=[_ns(id="derived_2"), _ns(id="derived_1")],
         reporter=_ns(series=["flow", "sed_sim"]),
     )
@@ -280,3 +327,120 @@ def test_reporting_records_lock_summary_field_order_and_error_entry_semantics():
     assert entries[0]["stage"] == "params"
     assert entries[1]["stage"] == "series"
     assert entries[1]["severity"] == "warning"
+
+
+def test_executor_run_returns_structured_batch_result():
+    executor = Executor.__new__(Executor)
+    executor.cfg = _ns(
+        basic=_ns(parallel=1),
+        parameters=_ns(physical=[_ns(name="p1"), _ns(name="p2")]),
+        objectives=_ns(items=[_ns(id="obj_a"), _ns(id="obj_b")]),
+        constraints=_ns(items=[_ns(id="con_a")]),
+        diagnostics=_ns(items=[_ns(id="diag_a")]),
+        series_index={"flow": _ns(size=2, sim=_ns(spec=None))},
+        series=[object()],
+    )
+    executor.services = _ns(
+        evaluator=_ns(nOutput=2, nConstraints=1),
+    )
+    executor.reporter = _ns(newBatchId=lambda: 1)
+    executor.optSign = [1, -1]
+
+    records = [
+        {
+            "i": 0,
+            "obj_a": 1.0,
+            "obj_b": 2.0,
+            "con_a": 3.0,
+            "diag_a": 4.0,
+            "P": np.array([10.0, 20.0]),
+            "flow.sim": np.array([100.0, 200.0]),
+        },
+        {
+            "i": 1,
+            "obj_a": 5.0,
+            "obj_b": 6.0,
+            "con_a": 7.0,
+            "diag_a": 8.0,
+            "P": np.array([30.0, 40.0]),
+            "flow.sim": np.array([300.0, 400.0]),
+        },
+    ]
+
+    executor._run_one = lambda X, i, batch_id: records[i]
+
+    result = Executor.run(executor, np.array([[1.0, 2.0], [3.0, 4.0]]))
+
+    assert isinstance(result, BatchRunResult)
+    assert np.allclose(result.X, np.array([[1.0, 2.0], [3.0, 4.0]]))
+    assert np.allclose(result.P, np.array([[10.0, 20.0], [30.0, 40.0]]))
+    assert np.allclose(result.objs, np.array([[1.0, 2.0], [5.0, 6.0]]))
+    assert np.allclose(result.cons, np.array([[3.0], [7.0]]))
+    assert np.allclose(result.diags, np.array([[4.0], [8.0]]))
+    assert set(result.series.keys()) == {"flow"}
+    assert np.allclose(result.series["flow"], np.array([[100.0, 200.0], [300.0, 400.0]]))
+
+
+def test_executor_run_pads_series_length_mismatch_with_nan_and_warning():
+    executor = Executor.__new__(Executor)
+    executor.cfg = _ns(
+        basic=_ns(parallel=1),
+        parameters=_ns(physical=[]),
+        objectives=_ns(items=[_ns(id="obj_a")]),
+        constraints=_ns(items=[]),
+        diagnostics=_ns(items=[]),
+        series_index={"flow": _ns(size=4, sim=_ns(spec=None))},
+        series=[object()],
+    )
+    executor.services = _ns(
+        evaluator=_ns(nOutput=1, nConstraints=0),
+    )
+    executor.reporter = _ns(newBatchId=lambda: 1)
+    executor.optSign = [1]
+
+    records = [
+        {"i": 0, "obj_a": 1.0, "flow.sim": np.array([10.0, 20.0, 30.0, 40.0]), "warnings": []},
+        {"i": 1, "obj_a": 2.0, "flow.sim": np.array([50.0, 60.0]), "warnings": []},
+    ]
+
+    executor._run_one = lambda X, i, batch_id: records[i]
+
+    result = Executor.run(executor, np.array([[1.0], [2.0]]))
+
+    assert np.allclose(result.objs, np.array([[1.0], [2.0]]))
+    assert np.allclose(result.series["flow"][0], np.array([10.0, 20.0, 30.0, 40.0]))
+    assert np.allclose(result.series["flow"][1, :2], np.array([50.0, 60.0]))
+    assert np.isnan(result.series["flow"][1, 2])
+    assert np.isnan(result.series["flow"][1, 3])
+    assert len(records[1]["warnings"]) == 1
+    assert records[1]["warnings"][0].code == "LENGTH_MISMATCH"
+
+
+def test_executor_run_keeps_failed_series_row_as_nan():
+    executor = Executor.__new__(Executor)
+    executor.cfg = _ns(
+        basic=_ns(parallel=1),
+        parameters=_ns(physical=[]),
+        objectives=_ns(items=[_ns(id="obj_a")]),
+        constraints=_ns(items=[]),
+        diagnostics=_ns(items=[]),
+        series_index={"flow": _ns(size=3, sim=_ns(spec=None))},
+        series=[object()],
+    )
+    executor.services = _ns(
+        evaluator=_ns(nOutput=1, nConstraints=0),
+    )
+    executor.reporter = _ns(newBatchId=lambda: 1)
+    executor.optSign = [1]
+
+    records = [
+        {"i": 0, "obj_a": 1.0, "flow.sim": np.array([1.0, 2.0, 3.0]), "warnings": []},
+        {"i": 1, "obj_a": np.inf, "warnings": [], "error": RunError(stage="subprocess", code="TIMEOUT", target="simulation", message="failed")},
+    ]
+
+    executor._run_one = lambda X, i, batch_id: records[i]
+
+    result = Executor.run(executor, np.array([[1.0], [2.0]]))
+
+    assert np.allclose(result.series["flow"][0], np.array([1.0, 2.0, 3.0]))
+    assert np.isnan(result.series["flow"][1]).all()

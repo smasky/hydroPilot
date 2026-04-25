@@ -65,13 +65,13 @@ def test_sim_model():
         print(f"\n  Test X (midpoint): {X[0]}")
 
         print("\n  Running evaluation...")
-        result = model.evaluate(X)
-        objs = result["objs"]
+        result = model.run(X)
+        objs = result.objs
         print(f"  Objectives: {objs}")
         print(f"  NSE = {objs[0, 0]:.6f}")
 
-        if result["cons"] is not None:
-            print(f"  Constraints: {result['cons']}")
+        if result.cons is not None:
+            print(f"  Constraints: {result.cons}")
 
         print("\n  SUCCESS: End-to-end daily simulation completed!")
     except Exception as e:

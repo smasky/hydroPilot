@@ -117,24 +117,25 @@ derived:
       args: [tn.sim]
 
 objectives:
-  items:
-    - id: obj_nse_flow
-      desc: "Maximize NSE for flow"
-      ref: nse_flow
-      sense: max
-    - id: obj_nse_tn
-      desc: "Maximize NSE for TN"
-      ref: nse_tn
-      sense: max
+  - id: obj_nse_flow
+    desc: "Maximize NSE for flow"
+    ref: nse_flow
+    sense: max
+  - id: obj_nse_tn
+    desc: "Maximize NSE for TN"
+    ref: nse_tn
+    sense: max
 
 diagnostics:
-  items:
-    - id: diag_kge
-      name: "KGE flow"
-      ref: kge_flow
-    - id: diag_rmse
-      name: "RMSE flow"
-      ref: rmse_flow
-    - id: diag_tn_load
-      name: "Annual TN load"
-      ref: annual_tn
+  - id: diag_kge
+    name: "KGE flow"
+    ref: kge_flow
+  - id: diag_rmse
+    name: "RMSE flow"
+    ref: rmse_flow
+  - id: diag_tn_load
+    name: "Annual TN load"
+    ref: annual_tn
+
+
+

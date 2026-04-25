@@ -11,12 +11,12 @@ class Workspace:
         self.cfgPath = cfg_path
         self.runPath = self._create_run_path()
         self.runQueue = queue.Queue()
-        self.backupPath = self.runPath / "backup"
+        self.archivePath = self.runPath / "archive"
         self._cleanup_lock = threading.Lock()
         self._cleanup_done = False
 
         self._create_instances()
-        self._backup_inputs()
+        self._archive_inputs()
 
     def _create_run_path(self) -> Path:
         now = datetime.now()
@@ -36,20 +36,20 @@ class Workspace:
             shutil.copytree(self.cfg.basic.projectPath, path)
             self.runQueue.put(str(path))
 
-    def _backup_inputs(self) -> None:
-        self.backupPath.mkdir(parents=True, exist_ok=True)
-        shutil.copy(self.cfgPath, self.backupPath)
+    def _archive_inputs(self) -> None:
+        self.archivePath.mkdir(parents=True, exist_ok=True)
+        shutil.copy(self.cfgPath, self.archivePath)
 
         cfg_file = Path(self.cfgPath).resolve()
         resolved_path = cfg_file.parent / (cfg_file.stem + "_general.yaml")
         if resolved_path.exists():
-            shutil.copy(resolved_path, self.backupPath)
+            shutil.copy(resolved_path, self.archivePath)
 
         for series in self.cfg.series:
             if series.obs:
                 obs_src = Path(series.obs.spec.file)
                 if obs_src.exists():
-                    shutil.copy(obs_src, self.backupPath)
+                    shutil.copy(obs_src, self.archivePath)
 
     def acquire_instance(self) -> str:
         return self.runQueue.get()
@@ -66,7 +66,7 @@ class Workspace:
                 for name in self.runPath.iterdir():
                     if not name.is_dir():
                         continue
-                    if name.name == "backup":
+                    if name.name == "archive":
                         continue
                     if name.name.startswith("instance_"):
                         try:

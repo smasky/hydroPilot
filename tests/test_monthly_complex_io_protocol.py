@@ -16,7 +16,7 @@ from hydro_pilot.io.writers import getWriter
 from hydro_pilot.io.writers.fixed_width import FixedWidthWriter
 from hydro_pilot.io.readers import getReader
 from hydro_pilot.io.readers.text import TextReader
-from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan
+from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan, SeriesPlanItem
 from hydro_pilot.models.swat.discovery import discover_swat_project
 from hydro_pilot.models.swat.library import SWAT_DB, SWAT_PARAM_LIBRARY
 from hydro_pilot.models.swat.series import buildSwatSeries, inferSwatOutputType
@@ -48,13 +48,17 @@ def test_monthly_complex_template_expands_explicit_io_types():
     assert diagnostics == []
     assert prepared.version == "swat"
     assert prepared.expanded_raw["version"] == "general"
+    assert "reporter" not in prepared.expanded_raw
     assert cfg.version == "general"
+    assert cfg.reporter.flushInterval == 50
+    assert cfg.reporter.holdingPenLimit == 20
+    assert cfg.reporter.series == []
     assert len(cfg.parameters.design) == 4
     assert len(cfg.parameters.physical) == 6
     assert cfg.parameters.transformer == "monthly_transform"
     assert len(cfg.series) == 2
-    assert len(cfg.objectives.use) == 2
-    assert len(cfg.diagnostics.use) == 3
+    assert len(cfg.objectives.items) == 2
+    assert len(cfg.diagnostics.items) == 3
 
     assert {p.writerType for p in cfg.parameters.physical} == {"fixed_width"}
     assert all(s.sim.readerType == "text" for s in cfg.series)
@@ -163,8 +167,8 @@ def test_series_extractor_warns_and_flattens_called_series_shape():
         series_index = {"flow": type("SeriesNode", (), {"sim": None})()}
 
     plan = SeriesPlan([])
-    plan.items = {
-        "derived_flow": {"id": "derived_flow", "obsItem": None, "simItem": call_spec}
+    plan.seriesItems = {
+        "derived_flow": SeriesPlanItem(id="derived_flow", obs=None, sim=call_spec)
     }
 
     class DummyObsStore(ObsStore):
@@ -194,8 +198,8 @@ def test_series_extractor_requires_called_series_dependencies_in_order():
         series_index = {"later": type("SeriesNode", (), {"sim": None})()}
 
     plan = SeriesPlan([])
-    plan.items = {
-        "early": {"id": "early", "obsItem": None, "simItem": call_spec}
+    plan.seriesItems = {
+        "early": SeriesPlanItem(id="early", obs=None, sim=call_spec)
     }
 
     class DummyObsStore(ObsStore):

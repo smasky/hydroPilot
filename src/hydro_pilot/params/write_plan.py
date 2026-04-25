@@ -1,7 +1,6 @@
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
-from .specs import PhysicalParamSpec
 from ..io.writers import getWriter
 from ..io.writers.targets import resolve_file_targets
 
@@ -14,22 +13,17 @@ class ParamWritePlan:
 
     @staticmethod
     def _to_raw_mapping(item: Any) -> Dict[str, Any]:
-        if isinstance(item, dict):
-            return dict(item)
         if hasattr(item, "model_dump"):
             return dict(item.model_dump())
+        if isinstance(item, dict):
+            return dict(item)
         raise ValueError(f"Unsupported physical parameter item type: {type(item)}")
 
     def _build_plan(self) -> None:
-        physical_raw = self.cfg.parameters.physical
-        phy_specs: List[PhysicalParamSpec] = []
-        for i, item in enumerate(physical_raw):
-            phy_specs.append(PhysicalParamSpec.fromDict(self._to_raw_mapping(item), i))
-
         project_root = Path(self.cfg.basic.projectPath)
 
-        for spec, raw_item in zip(phy_specs, physical_raw):
-            raw_item = self._to_raw_mapping(raw_item)
+        for spec in self.cfg.parameters.physical:
+            raw_item = self._to_raw_mapping(spec)
             file_info = spec.file
             writer_type = spec.writerType
             writer_cls = getWriter(writer_type)

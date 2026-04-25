@@ -71,9 +71,9 @@ class RunConfig(ConfigNode):
             raise ValueError("derived must be a list")
         derived = [DerivedSpec.from_raw(item) for item in derived_raw]
 
-        objectives = ObjectiveBlock.from_raw(raw.get("objectives", {}))
-        constraints = ConstraintBlock.from_raw(raw.get("constraints", {}))
-        diagnostics = DiagnosticBlock.from_raw(raw.get("diagnostics", {}))
+        objectives = ObjectiveBlock.from_raw(raw.get("objectives", []))
+        constraints = ConstraintBlock.from_raw(raw.get("constraints", []))
+        diagnostics = DiagnosticBlock.from_raw(raw.get("diagnostics", []))
 
         cfg = cls.model_validate({
             "version": version,
@@ -109,17 +109,17 @@ class RunConfig(ConfigNode):
             env.update(env_list)
             dep.update(dep_list)
 
-        for item in self.objectives.items.values():
+        for item in self.objectives.items:
             env_list, dep_list = item.get_env_dep_list()
             env.update(env_list)
             dep.update(dep_list)
 
-        for item in self.constraints.items.values():
+        for item in self.constraints.items:
             env_list, dep_list = item.get_env_dep_list()
             env.update(env_list)
             dep.update(dep_list)
 
-        for item in self.diagnostics.items.values():
+        for item in self.diagnostics.items:
             env_list, dep_list = item.get_env_dep_list()
             env.update(env_list)
             dep.update(dep_list)

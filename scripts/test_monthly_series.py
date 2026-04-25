@@ -62,13 +62,13 @@ def test_sim_model():
         print(f"\n  Test X (midpoint): {X[0]}")
 
         print("\n  Running evaluation (SWAT monthly series)...")
-        result = model.evaluate(X)
-        objs = result["objs"]
+        result = model.run(X)
+        objs = result.objs
         print(f"  Objectives: {objs}")
         assert np.all(np.isfinite(objs)), f"Objectives contain non-finite values: {objs}"
 
-        if result["cons"] is not None:
-            print(f"  Constraints: {result['cons']}")
+        if result.cons is not None:
+            print(f"  Constraints: {result.cons}")
         else:
             print("  Constraints: None")
 

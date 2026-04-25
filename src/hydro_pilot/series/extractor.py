@@ -54,9 +54,9 @@ class SeriesExtractor:
     def extract(self, work_path: str, context: dict) -> dict:
         env = context.copy()
 
-        for sid, item in self.seriesPlan.items.items():
-            sim_item = item["simItem"]
-            obs_item = item["obsItem"]
+        for sid, item in self.seriesPlan.seriesItems.items():
+            sim_item = item.sim
+            obs_item = item.obs
 
             if isinstance(sim_item, CallSpec):
                 func_name = sim_item.func

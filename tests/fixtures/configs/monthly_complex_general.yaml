@@ -1,27 +1,39 @@
 version: general
 basic:
   projectPath: E:\BMPs\TxtInOut
-  workPath: ../../../work
+  workPath: E:\hydroPilot\work
   command: swat.exe
+  timeout: -1
+  parallel: 1
+  keepInstances: false
 parameters:
   design:
-    - name: CN2_factor
+    - index: 0
+      name: CN2_factor
       type: float
       bounds: [0.8, 1.2]
-    - name: ESCO_val
+      sets: []
+    - index: 1
+      name: ESCO_val
       type: float
       bounds: [0.5, 0.95]
-    - name: GW_DELAY_val
+      sets: []
+    - index: 2
+      name: GW_DELAY_val
       type: float
-      bounds: [10, 500]
-    - name: SURLAG_val
+      bounds: [10.0, 500.0]
+      sets: []
+    - index: 3
+      name: SURLAG_val
       type: float
-      bounds: [0.5, 24]
+      bounds: [0.5, 24.0]
+      sets: []
   physical:
-    - name: CN2
+    - index: 0
+      name: CN2
       type: float
-      bounds: [35.0, 98.0]
       mode: r
+      bounds: [35.0, 98.0]
       writerType: fixed_width
       file:
         name:
@@ -342,10 +354,12 @@ parameters:
         width: 16
         precision: 2
         maxNum: 1
-    - name: CN2
+      sets: []
+    - index: 1
+      name: CN2
       type: float
-      bounds: [35.0, 98.0]
       mode: r
+      bounds: [35.0, 98.0]
       writerType: fixed_width
       file:
         name:
@@ -502,10 +516,12 @@ parameters:
         width: 16
         precision: 2
         maxNum: 1
-    - name: ESCO_HRU
+      sets: []
+    - index: 2
+      name: ESCO_HRU
       type: float
-      bounds: [0.0, 1.0]
       mode: v
+      bounds: [0.0, 1.0]
       writerType: fixed_width
       file:
         name: '[0-9]*.hru'
@@ -514,10 +530,12 @@ parameters:
         width: 16
         precision: 3
         maxNum: 1
-    - name: ESCO_HRU
+      sets: []
+    - index: 3
+      name: ESCO_HRU
       type: float
-      bounds: [0.0, 1.0]
       mode: v
+      bounds: [0.0, 1.0]
       writerType: fixed_width
       file:
         name: '[0-9]*.hru'
@@ -526,10 +544,12 @@ parameters:
         width: 16
         precision: 3
         maxNum: 1
-    - name: GW_DELAY
+      sets: []
+    - index: 4
+      name: GW_DELAY
       type: float
+      mode: v
       bounds: [0.0, 500.0]
-      mode: v
       writerType: fixed_width
       file:
         name: '*.gw'
@@ -538,10 +558,12 @@ parameters:
         width: 16
         precision: 4
         maxNum: 1
-    - name: SURLAG_BSN
+      sets: []
+    - index: 5
+      name: SURLAG_BSN
       type: float
-      bounds: [0.05, 24.0]
       mode: v
+      bounds: [0.05, 24.0]
       writerType: fixed_width
       file:
         name: basins.bsn
@@ -550,6 +572,7 @@ parameters:
         width: 16
         precision: 3
         maxNum: 1
+      sets: []
   hardBound: true
   transformer: monthly_transform
 series:
@@ -563,13 +586,13 @@ series:
         - [71, 753, 62]
         - [877, 1559, 62]
         - [1683, 2365, 62]
+    size: 36
     obs:
       file: ../../../examples/obs_flow_monthly.txt
       rowRanges:
         - [1, 36]
       colSpan: [1, 12]
       readerType: text
-    size: 36
   - id: tn
     desc: Monthly total nitrogen at outlet
     sim:
@@ -580,71 +603,82 @@ series:
         - [71, 753, 62]
         - [877, 1559, 62]
         - [1683, 2365, 62]
+    size: 36
     obs:
       file: ../../../examples/obs_tn_monthly.txt
       rowRanges:
         - [1, 36]
       colSpan: [1, 12]
       readerType: text
-    size: 36
-functions:
-  - name: NSE
-    kind: builtin
-  - name: KGE
-    kind: builtin
-  - name: RMSE
-    kind: builtin
-  - name: monthly_transform
-    kind: external
-    file: ../../../examples/monthly_transform.py
-    args: [X]
-  - name: calc_annual_tn_load
-    kind: external
-    file: ../../../examples/calc_tn_load.py
-    args: [tn_sim]
-derived:
-  - id: nse_flow
-    call:
-      func: NSE
-      args: [flow.sim, flow.obs]
-  - id: nse_tn
-    call:
-      func: NSE
-      args: [tn.sim, tn.obs]
-  - id: kge_flow
-    call:
-      func: KGE
-      args: [flow.sim, flow.obs]
-  - id: rmse_flow
-    call:
-      func: RMSE
-      args: [flow.sim, flow.obs]
-  - id: annual_tn
-    call:
-      func: calc_annual_tn_load
-      args: [tn.sim]
 objectives:
-  items:
-    - id: obj_nse_flow
-      desc: Maximize NSE for flow
-      ref: nse_flow
-      sense: max
-    - id: obj_nse_tn
-      desc: Maximize NSE for TN
-      ref: nse_tn
-      sense: max
-diagnostics:
-  items:
-    - id: diag_kge
-      name: KGE flow
-      ref: kge_flow
-    - id: diag_rmse
-      name: RMSE flow
-      ref: rmse_flow
-    - id: diag_tn_load
-      name: Annual TN load
-      ref: annual_tn
+  - id: obj_nse_flow
+    ref: nse_flow
+    desc: Maximize NSE for flow
+    sense: max
+    on_error: -.inf
+  - id: obj_nse_tn
+    ref: nse_tn
+    desc: Maximize NSE for TN
+    sense: max
+    on_error: -.inf
 reporter:
   flushInterval: 50
   holdingPenLimit: 20
   series: []
+functions:
+  - name: NSE
+    kind: builtin
+    args: []
+  - name: KGE
+    kind: builtin
+    args: []
+  - name: RMSE
+    kind: builtin
+    args: []
+  - name: monthly_transform
+    kind: external
+    args: [X]
+    file: E:\hydroPilot\examples\monthly_transform.py
+  - name: calc_annual_tn_load
+    kind: external
+    args: [tn_sim]
+    file: E:\hydroPilot\examples\calc_tn_load.py
+derived:
+  - id: nse_flow
+    desc: nse_flow
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+  - id: nse_tn
+    desc: nse_tn
+    call:
+      func: NSE
+      args: [tn.sim, tn.obs]
+  - id: kge_flow
+    desc: kge_flow
+    call:
+      func: KGE
+      args: [flow.sim, flow.obs]
+  - id: rmse_flow
+    desc: rmse_flow
+    call:
+      func: RMSE
+      args: [flow.sim, flow.obs]
+  - id: annual_tn
+    desc: annual_tn
+    call:
+      func: calc_annual_tn_load
+      args: [tn.sim]
+diagnostics:
+  - id: diag_kge
+    ref: kge_flow
+    name: KGE flow
+    on_error: .nan
+  - id: diag_rmse
+    ref: rmse_flow
+    name: RMSE flow
+    on_error: .nan
+  - id: diag_tn_load
+    ref: annual_tn
+    name: Annual TN load
+    on_error: .nan

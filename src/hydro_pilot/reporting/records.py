@@ -27,18 +27,18 @@ def parse_report_ids(cfg):
 
     orderedScalars = []
     seen = set()
-    for oid in cfg.objectives.use:
-        if oid not in seen:
-            orderedScalars.append(oid)
-            seen.add(oid)
-    for cid in cfg.constraints.use:
-        if cid not in seen:
-            orderedScalars.append(cid)
-            seen.add(cid)
-    for did in cfg.diagnostics.use:
-        if did not in seen:
-            orderedScalars.append(did)
-            seen.add(did)
+    for item in cfg.objectives.items:
+        if item.id not in seen:
+            orderedScalars.append(item.id)
+            seen.add(item.id)
+    for item in cfg.constraints.items:
+        if item.id not in seen:
+            orderedScalars.append(item.id)
+            seen.add(item.id)
+    for item in cfg.diagnostics.items:
+        if item.id not in seen:
+            orderedScalars.append(item.id)
+            seen.add(item.id)
     for d in cfg.derived:
         if d.id not in seen:
             orderedScalars.append(d.id)
@@ -108,20 +108,25 @@ def record_status(item):
 def collect_error_entries(error, warnings):
     entries = []
     if error:
-        entries.append(error)
-    for w in warnings:
-        if isinstance(w, dict):
-            entries.append(w)
-        else:
-            entries.append({
-                "stage": w.stage,
-                "code": w.code,
-                "target": w.target,
-                "message": w.message,
-                "severity": w.severity,
-                "traceback": getattr(w, "traceback", ""),
-            })
+        entries.append(_error_entry(error))
+    for warning in warnings:
+        entries.append(_error_entry(warning))
     return entries
+
+
+def _error_entry(entry):
+    if isinstance(entry, dict):
+        return entry
+    if hasattr(entry, "to_dict"):
+        return entry.to_dict()
+    return {
+        "stage": entry.stage,
+        "code": entry.code,
+        "target": entry.target,
+        "message": entry.message,
+        "severity": entry.severity,
+        "traceback": getattr(entry, "traceback", ""),
+    }
 
 
 def make_error_json(batchId, runId, entry):

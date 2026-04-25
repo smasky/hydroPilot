@@ -54,9 +54,9 @@ def test_validate_general_config_success(tmp_path: Path):
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
 
@@ -67,11 +67,75 @@ def test_validate_general_config_success(tmp_path: Path):
     diagnostics = validate_config(config_path)
     prepared = prepare_config(config_path)
     loaded = load_config(config_path)
+    resolved_path = config_path.with_name(f"{config_path.stem}_general.yaml")
+    resolved = yaml.safe_load(resolved_path.read_text(encoding="utf-8"))
 
     assert diagnostics == []
     assert prepared.version == "general"
     assert prepared.expanded_raw == prepared.raw
     assert loaded.version == "general"
+    assert loaded.basic.keepInstances is False
+    assert resolved["version"] == "general"
+    assert resolved["basic"]["keepInstances"] is False
+    assert "configPath" not in resolved["basic"]
+
+
+def test_general_resolved_config_omits_absent_empty_optional_blocks(tmp_path: Path):
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": ".",
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [{"name": "x1", "bounds": [0, 1]}],
+            "physical": [{
+                "name": "x1",
+                "type": "float",
+                "bounds": [0, 1],
+                "writerType": "fixed_width",
+                "file": {
+                    "name": "params.txt",
+                    "line": 1,
+                    "start": 1,
+                    "width": 10,
+                    "precision": 2,
+                },
+            }],
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {
+                "file": "output.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+            "obs": {
+                "file": "obs.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+        }],
+        "objectives": [],
+    }
+
+    (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
+    config_path = tmp_path / "minimal.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    loaded = load_config(config_path)
+    resolved = yaml.safe_load(config_path.with_name("minimal_general.yaml").read_text(encoding="utf-8"))
+
+    assert loaded.functions == {}
+    assert loaded.constraints.items == []
+    assert loaded.diagnostics.items == []
+    assert "functions" not in resolved
+    assert "derived" not in resolved
+    assert "constraints" not in resolved
+    assert "diagnostics" not in resolved
 
 
 def test_validate_general_config_reports_missing_obs_column_with_series_id(tmp_path: Path):
@@ -114,9 +178,9 @@ def test_validate_general_config_reports_missing_obs_column_with_series_id(tmp_p
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -170,9 +234,9 @@ def test_validate_general_config_reports_missing_sim_rows(tmp_path: Path):
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -225,9 +289,9 @@ def test_validate_general_config_reports_missing_physical_precision(tmp_path: Pa
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -281,9 +345,9 @@ def test_validate_general_config_reports_unknown_reader_type(tmp_path: Path):
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -321,9 +385,9 @@ def test_validate_swat_config_requires_variable_or_explicit_column_for_swat_shor
         }],
         "functions": [{"name": "NSE", "kind": "builtin"}],
         "derived": [{"id": "nse_flow", "call": {"func": "NSE", "args": ["flow.sim", "flow.obs"]}}],
-        "objectives": {"items": [{"id": "obj_nse", "ref": "nse_flow", "sense": "max"}]},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [{"id": "obj_nse", "ref": "nse_flow", "sense": "max"}],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
 
@@ -372,9 +436,9 @@ def test_validate_general_config_does_not_apply_swat_field_policy(tmp_path: Path
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
 
@@ -432,9 +496,9 @@ def test_validate_general_config_handles_windows_style_external_function_path(tm
             "file": str(external_file),
         }],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
 
@@ -489,9 +553,9 @@ def test_validate_general_config_reports_missing_writer_type(tmp_path: Path):
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -549,9 +613,9 @@ def test_validate_general_config_reports_missing_fixed_width_file_name(tmp_path:
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -621,9 +685,9 @@ def test_validate_general_config_reports_missing_fixed_width_file_name(tmp_path:
         ],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -682,9 +746,9 @@ def test_validate_general_config_reports_duplicate_function_name(tmp_path: Path)
             {"name": "NSE", "kind": "builtin"},
         ],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -740,9 +804,9 @@ def test_validate_general_config_reports_missing_dependencies_path(tmp_path: Pat
         }],
         "functions": [{"name": "NSE", "kind": "builtin"}],
         "derived": [{"id": "nse_flow", "call": {"func": "NSE", "args": ["missing.sim", "flow.obs"]}}],
-        "objectives": {"items": [{"id": "obj_nse", "ref": "nse_flow", "sense": "max"}]},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [{"id": "obj_nse", "ref": "nse_flow", "sense": "max"}],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -784,9 +848,9 @@ def test_validate_swat_config_reports_unknown_design_parameter(tmp_path: Path):
         }],
         "functions": [{"name": "NSE", "kind": "builtin"}],
         "derived": [{"id": "nse_flow", "call": {"func": "NSE", "args": ["flow.sim", "flow.obs"]}}],
-        "objectives": {"items": [{"id": "obj_nse", "ref": "nse_flow", "sense": "max"}]},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [{"id": "obj_nse", "ref": "nse_flow", "sense": "max"}],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
 
@@ -855,9 +919,9 @@ def test_validate_cli_prints_success_message(tmp_path: Path):
         }],
         "functions": [],
         "derived": [],
-        "objectives": {"items": []},
-        "constraints": {"items": []},
-        "diagnostics": {"items": []},
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
         "reporter": {},
     }
     (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
@@ -874,3 +938,4 @@ def test_validate_cli_prints_success_message(tmp_path: Path):
 
     assert result.returncode == 0
     assert f"Validation passed: {config_path}" in result.stdout
+
