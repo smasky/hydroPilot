@@ -5,13 +5,33 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hydropilot"
 version = "0.1.0"
-description = "A hydrological model driver framework for coupling models (SWAT, APEX, HBV, VIC) with UQPyL"
+description = "A hydrological model driver framework for coupling models with UQPyL"
+readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Mengtian Wu", email = "wmtsky@hhu.edu.cn" }
+]
+keywords = ["hydrology", "modeling", "SWAT", "UQPyL", "optimization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Hydrology",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "numpy>=1.24",
     "pydantic>=2.0",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/smasky/hydroPilot"
+Repository = "https://github.com/smasky/hydroPilot"
+Issues = "https://github.com/smasky/hydroPilot/issues"
 
 [project.scripts]
 hydropilot-validate = "hydro_pilot.cli.validate:main"
@@ -21,11 +41,18 @@ uqpyl = ["UQPyL"]
 dev = [
     "pytest>=7.0",
     "pytest-cov",
+    "build",
+    "twine",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["hydro_pilot*"]
+
+[tool.setuptools.package-data]
+hydro_pilot = [
+    "models/swat/*.yaml",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
