@@ -1,7 +1,5 @@
 from typing import Dict, List, Tuple
 
-from .specs import DesignParamSpec
-
 
 class ParamSpace:
     def __init__(self, design_list):
@@ -19,14 +17,13 @@ class ParamSpace:
         lbs: List[float] = []
         sets: Dict[int, List[float]] = {}
 
-        for i, item in enumerate(design_list):
-            spec = DesignParamSpec.fromDict(item, i)
+        for i, spec in enumerate(design_list):
             if spec.name in seen_names:
                 raise ValueError(f"Duplicate design parameter name: {spec.name}")
             seen_names.add(spec.name)
             names.append(spec.name)
-            types.append(spec.type)
-            if spec.type == 2:
+            types.append(spec.typeCode)
+            if spec.type == "discrete":
                 sets[i] = spec.sets
             lbs.append(spec.lb)
             ubs.append(spec.ub)

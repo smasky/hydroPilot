@@ -1,6 +1,6 @@
 from .schema.base import ConfigNode, expand_row_ranges
 from .schema.basic import BasicSpec
-from .schema.parameters import PhysicalParameterSpec, ParametersSpec
+from .schema.parameters import DesignParameterSpec, PhysicalParameterSpec, ParametersSpec
 from .schema.series import CallSpec, ReaderSpec, SeriesSpec
 from .schema.functions import FunctionSpec, DerivedSpec
 from .schema.evaluation import (
