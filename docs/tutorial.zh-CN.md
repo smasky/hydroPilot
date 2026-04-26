@@ -55,13 +55,13 @@ pip install -e .[uqpyl]
 这个项目使用 `src` 布局，所以如果你没有安装项目，直接执行：
 
 ```bash
-python -m hydro_pilot.cli.validate ...
+python -m hydropilot.cli.validate ...
 ```
 
 很可能会遇到：
 
 ```text
-ModuleNotFoundError: No module named 'hydro_pilot'
+ModuleNotFoundError: No module named 'hydropilot'
 ```
 
 最稳妥的方式还是先执行：
@@ -114,7 +114,7 @@ hydropilot-validate examples/test_daily.yaml
 或者：
 
 ```bash
-python -m hydro_pilot.cli.validate examples/test_daily.yaml
+python -m hydropilot.cli.validate examples/test_daily.yaml
 ```
 
 ### 这一步能帮你做什么
@@ -407,7 +407,7 @@ objectives:
 
 ```python
 import numpy as np
-from hydro_pilot import SimModel
+from hydropilot import SimModel
 
 X = np.array([
   [50.0, 0.5, 100.0],
@@ -556,7 +556,7 @@ archive/runner_failures/2_5.stderr.log
 
 ## 13. 常见问题
 
-### 13.1 `ModuleNotFoundError: No module named 'hydro_pilot'`
+### 13.1 `ModuleNotFoundError: No module named 'hydropilot'`
 
 通常是因为你还没有安装当前项目。
 

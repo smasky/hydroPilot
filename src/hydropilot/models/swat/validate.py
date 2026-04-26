@@ -1,19 +1,30 @@
 from pathlib import Path
 from typing import Any
 
-from hydro_pilot.config.paths import resolve_config_path
-from hydro_pilot.validation.diagnostics import Diagnostic, error
+from hydropilot.config.paths import resolve_config_path
+from hydropilot.validation.diagnostics import Diagnostic, error
 
 
 SWAT_ROW_FIELDS = {"id", "period", "timestep"}
 SWAT_OUTPUT_FILES = {"output.rch", "output.sub", "output.hru"}
+AMBIGUOUS_SWAT_PARAMETER_ALIASES = {
+    "DDRAIN": ["DDRAIN_BSN", "DDRAIN_MGT"],
+    "EPCO": ["EPCO_BSN", "EPCO_HRU"],
+    "ESCO": ["ESCO_BSN", "ESCO_HRU"],
+    "GDRAIN": ["GDRAIN_BSN", "GDRAIN_MGT"],
+    "R2ADJ": ["R2ADJ_BSN", "R2ADJ_HRU"],
+    "SURLAG": ["SURLAG_BSN", "SURLAG_HRU"],
+    "TDRAIN": ["TDRAIN_BSN", "TDRAIN_MGT"],
+}
 
 
 def validate_swat_config(raw: dict[str, Any], base_path: Path) -> list[Diagnostic]:
     diagnostics = _validate_swat_project(raw, base_path)
     if diagnostics:
         return diagnostics
-    return _validate_swat_series_inputs(raw)
+    diagnostics.extend(_validate_swat_parameter_names(raw))
+    diagnostics.extend(_validate_swat_series_inputs(raw))
+    return diagnostics
 
 
 def _validate_swat_project(raw: dict[str, Any], base_path: Path) -> list[Diagnostic]:
@@ -85,6 +96,36 @@ def _uses_swat_series_shortcut(sim: dict[str, Any]) -> bool:
     sim_file = str(sim.get("file", ""))
     base_name = sim_file.replace("\\", "/").rsplit("/", 1)[-1]
     return base_name in SWAT_OUTPUT_FILES or any(field in sim for field in SWAT_ROW_FIELDS)
+
+
+def _validate_swat_parameter_names(raw: dict[str, Any]) -> list[Diagnostic]:
+    params = raw.get("parameters")
+    if not isinstance(params, dict):
+        return []
+
+    diagnostics: list[Diagnostic] = []
+    diagnostics.extend(_validate_swat_parameter_name_list(params.get("design", []), "parameters.design"))
+    diagnostics.extend(_validate_swat_parameter_name_list(params.get("physical", []), "parameters.physical"))
+    return diagnostics
+
+
+def _validate_swat_parameter_name_list(items: Any, path_prefix: str) -> list[Diagnostic]:
+    if not isinstance(items, list):
+        return []
+
+    diagnostics: list[Diagnostic] = []
+    for item in items:
+        if not isinstance(item, dict) or "name" not in item:
+            continue
+        name = str(item["name"])
+        candidates = AMBIGUOUS_SWAT_PARAMETER_ALIASES.get(name)
+        if candidates:
+            diagnostics.append(error(
+                f"{path_prefix}[{name}]",
+                f"ambiguous SWAT parameter name '{name}'",
+                f"use one of the explicit SWAT parameter names: {', '.join(candidates)}",
+            ))
+    return diagnostics
 
 
 def translate_swat_exception(raw: dict[str, Any], exc: Exception) -> Diagnostic:

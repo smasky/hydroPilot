@@ -10,19 +10,19 @@ if str(SRC) not in sys.path:
 
 
 def test_top_level_exports_sim_model():
-    from hydro_pilot import BatchRunResult, SimModel
-    from hydro_pilot.api import BatchRunResult as ApiBatchRunResult
-    from hydro_pilot.api import SimModel as ApiSimModel
+    from hydropilot import BatchRunResult, SimModel
+    from hydropilot.api import BatchRunResult as ApiBatchRunResult
+    from hydropilot.api import SimModel as ApiSimModel
 
     assert SimModel is ApiSimModel
     assert BatchRunResult is ApiBatchRunResult
 
 
 def test_migrated_layers_export_new_paths():
-    from hydro_pilot.evaluation import Evaluator, FunctionManager
-    from hydro_pilot.params import ParamApplier, ParamSpace, ParamWritePlan
-    from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan, SeriesPlanItem
-    from hydro_pilot.runtime import (
+    from hydropilot.evaluation import Evaluator, FunctionManager
+    from hydropilot.params import ParamApplier, ParamSpace, ParamWritePlan
+    from hydropilot.series import ObsStore, SeriesExtractor, SeriesPlan, SeriesPlanItem
+    from hydropilot.runtime import (
         ExecutionServices,
         Executor,
         Session,
@@ -51,7 +51,7 @@ def test_migrated_layers_export_new_paths():
 def test_integrations_exports_uqpyl_adapter_when_optional_dep_available():
     pytest.importorskip("UQPyL")
 
-    from hydro_pilot.integrations import UQPyLAdapter
-    from hydro_pilot.integrations.uqpyl import UQPyLAdapter as DirectUQPyLAdapter
+    from hydropilot.integrations import UQPyLAdapter
+    from hydropilot.integrations.uqpyl import UQPyLAdapter as DirectUQPyLAdapter
 
     assert UQPyLAdapter is DirectUQPyLAdapter

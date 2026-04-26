@@ -3,11 +3,11 @@ from typing import Any
 
 import yaml
 
-from hydro_pilot.config.paths import resolve_config_path
-from hydro_pilot.config.specs import RunConfig
-from hydro_pilot.io.writers import getWriter
-from hydro_pilot.io.readers import getReader
-from hydro_pilot.validation.diagnostics import Diagnostic, error, has_error
+from hydropilot.config.paths import resolve_config_path
+from hydropilot.config.specs import RunConfig
+from hydropilot.io.writers import getWriter
+from hydropilot.io.readers import getReader
+from hydropilot.validation.diagnostics import Diagnostic, error, has_error, warning
 
 
 GENERAL_ERROR_TRANSLATIONS = {
@@ -75,7 +75,36 @@ def _validate_general_parameters(raw: dict[str, Any]) -> list[Diagnostic]:
         diagnostics.append(error("parameters.physical", "parameters.physical must be a non-empty list"))
     else:
         diagnostics.extend(_validate_general_physical(physical))
+    if isinstance(design, list) and design and isinstance(physical, list) and physical:
+        diagnostics.extend(_validate_parameter_counts(params, design, physical))
     return diagnostics
+
+
+def _validate_parameter_counts(params: dict[str, Any], design: list[Any], physical: list[Any]) -> list[Diagnostic]:
+    n_design = len(design)
+    n_physical = len(physical)
+    if n_design == n_physical:
+        return []
+
+    transformer = params.get("transformer")
+    if transformer:
+        return [warning(
+            "parameters.transformer",
+            (
+                f"parameters.design has {n_design} items and parameters.physical has {n_physical} items; "
+                f"transformer must return {n_physical} physical parameter values"
+            ),
+            "confirm the transformer output order and length match parameters.physical",
+        )]
+
+    return [error(
+        "parameters",
+        (
+            f"parameters.design has {n_design} items and parameters.physical has {n_physical} items; "
+            "counts must match without parameters.transformer"
+        ),
+        "add parameters.transformer or make design and physical lists the same length",
+    )]
 
 
 def _validate_general_design(design: list[Any]) -> list[Diagnostic]:

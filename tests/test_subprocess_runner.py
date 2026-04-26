@@ -8,10 +8,10 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from hydro_pilot.config.schema.basic import BasicSpec
-from hydro_pilot.io.runners.subprocess_runner import SubprocessRunner
-from hydro_pilot.runtime.executor import Executor
-from hydro_pilot.runtime.errors import RunError
+from hydropilot.config.schema.basic import BasicSpec
+from hydropilot.io.runners.subprocess_runner import SubprocessRunner
+from hydropilot.runtime.executor import Executor
+from hydropilot.runtime.errors import RunError
 
 
 def test_basic_spec_accepts_command_list(tmp_path: Path):

@@ -6,7 +6,7 @@ import yaml
 
 from ..models.registry import get_template
 from ..models.swat.validate import translate_swat_exception, validate_swat_config
-from ..validation.diagnostics import Diagnostic
+from ..validation.diagnostics import Diagnostic, has_error
 from ..validation.general import validate_general_config
 from .paths import resolve_config_file
 from .specs import RunConfig
@@ -19,6 +19,7 @@ class PreparedConfig:
     expanded_raw: dict[str, Any]
     config: RunConfig
     version: str
+    diagnostics: list[Diagnostic]
 
 
 class ConfigPreparationError(Exception):
@@ -39,7 +40,7 @@ def prepare_config(path: Union[str, Path]) -> PreparedConfig:
         expanded_raw = _expand_template_config(raw, yaml_file.parent, version)
 
     diagnostics = validate_general_config(expanded_raw, yaml_file.parent)
-    if diagnostics:
+    if has_error(diagnostics):
         raise ConfigPreparationError(diagnostics)
 
     try:
@@ -52,6 +53,7 @@ def prepare_config(path: Union[str, Path]) -> PreparedConfig:
         expanded_raw=expanded_raw,
         config=config,
         version=version,
+        diagnostics=diagnostics,
     )
 
 
@@ -180,25 +182,26 @@ def _config_to_user_dict(cfg: RunConfig, source_raw: dict[str, Any]) -> dict[str
     data = {
         "version": "general",
         "basic": _basic_to_dict(cfg.basic),
-        "parameters": _parameters_to_dict(cfg.parameters),
-        "series": [_series_to_dict(item) for item in cfg.series],
-        "objectives": _ref_block_to_list(cfg.objectives),
-        "reporter": _model_public_dict(cfg.reporter),
     }
 
     functions = [_function_to_dict(item) for item in cfg.functions.values()]
     derived = [_derived_to_dict(item) for item in cfg.derived]
+    objectives = _ref_block_to_list(cfg.objectives)
     constraints = _ref_block_to_list(cfg.constraints)
     diagnostics = _ref_block_to_list(cfg.diagnostics)
 
     if "functions" in source_raw or functions:
         data["functions"] = functions
+    data["parameters"] = _parameters_to_dict(cfg.parameters)
+    data["series"] = [_series_to_dict(item) for item in cfg.series]
     if "derived" in source_raw or derived:
         data["derived"] = derived
+    data["objectives"] = objectives
     if "constraints" in source_raw or constraints:
         data["constraints"] = constraints
     if "diagnostics" in source_raw or diagnostics:
         data["diagnostics"] = diagnostics
+    data["reporter"] = _model_public_dict(cfg.reporter)
 
     return data
 
@@ -271,7 +274,11 @@ def _normalize_plain(value):
     if isinstance(value, Path):
         return _path_to_str(value)
     if isinstance(value, dict):
-        return {k: _normalize_plain(v) for k, v in value.items()}
+        return {
+            k: _normalize_plain(v)
+            for k, v in value.items()
+            if not (k == "sets" and v == [])
+        }
     if isinstance(value, tuple):
         return [_normalize_plain(v) for v in value]
     if isinstance(value, list):

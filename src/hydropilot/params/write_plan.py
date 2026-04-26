@@ -21,6 +21,8 @@ class ParamWritePlan:
 
     def _build_plan(self) -> None:
         project_root = Path(self.cfg.basic.projectPath)
+        registered_by_index: Dict[int, int] = {}
+        names_by_index: Dict[int, str] = {}
 
         for spec in self.cfg.parameters.physical:
             raw_item = self._to_raw_mapping(spec)
@@ -29,6 +31,8 @@ class ParamWritePlan:
             writer_cls = getWriter(writer_type)
             lib_info = writer_cls.buildSpec(raw_item)
             writer_cls.validateSpec(raw_item)
+            registered_by_index.setdefault(spec.index, 0)
+            names_by_index[spec.index] = spec.name
 
             real_files = resolve_file_targets(project_root, file_info["name"])
             for rel_file in real_files:
@@ -55,8 +59,18 @@ class ParamWritePlan:
                         "width": lib_info.file.width,
                         "precision": lib_info.file.precision,
                         "maxNum": lib_info.file.maxNum,
+                        "selectIndex": lib_info.file.selectIndex,
                     },
                 })
 
-                handler.register_param(spec, lib_info_for_file, self.cfg.parameters.hardBound)
-                task["indices"].append(spec.index)
+                if handler.register_param(spec, lib_info_for_file, self.cfg.parameters.hardBound):
+                    task["indices"].append(spec.index)
+                    registered_by_index[spec.index] += 1
+
+        for index, count in registered_by_index.items():
+            if count == 0:
+                name = names_by_index.get(index, str(index))
+                raise ValueError(
+                    f"No writable entries found for parameter '{name}' in any target file. "
+                    f"Check file pattern and fixed_width line/start/width/maxNum/selectIndex settings."
+                )

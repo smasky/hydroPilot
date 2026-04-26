@@ -9,19 +9,20 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from hydro_pilot.config.specs import CallSpec
-from hydro_pilot.config.loader import load_config, prepare_config
-from hydro_pilot.validation.entry import validate_config
-from hydro_pilot.io.writers import getWriter
-from hydro_pilot.io.writers.fixed_width import FixedWidthWriter
-from hydro_pilot.io.readers import getReader
-from hydro_pilot.io.readers.text import TextReader
-from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan, SeriesPlanItem
-from hydro_pilot.models.swat.discovery import discover_swat_project
-from hydro_pilot.models.swat.library import SWAT_DB, SWAT_PARAM_LIBRARY
-from hydro_pilot.models.swat.series import buildSwatSeries, inferSwatOutputType
-from hydro_pilot.models.swat.variables import calcSwatOutputRows
-from hydro_pilot.runtime.errors import RunError
+from hydropilot.config.specs import CallSpec
+from hydropilot.config.loader import load_config, prepare_config
+from hydropilot.validation.entry import validate_config
+from hydropilot.validation.diagnostics import has_error
+from hydropilot.io.writers import getWriter
+from hydropilot.io.writers.fixed_width import FixedWidthWriter
+from hydropilot.io.readers import getReader
+from hydropilot.io.readers.text import TextReader
+from hydropilot.series import ObsStore, SeriesExtractor, SeriesPlan, SeriesPlanItem
+from hydropilot.models.swat.discovery import discover_swat_project
+from hydropilot.models.swat.library import SWAT_DB, SWAT_PARAM_LIBRARY
+from hydropilot.models.swat.series import buildSwatSeries, inferSwatOutputType
+from hydropilot.models.swat.variables import calcSwatOutputRows
+from hydropilot.runtime.errors import RunError
 
 CFG_PATH = ROOT / "tests" / "fixtures" / "configs" / "monthly_complex.yaml"
 PROJECT_PATH = Path(r"E:\BMPs\TxtInOut")
@@ -46,7 +47,8 @@ def test_monthly_complex_template_expands_explicit_io_types():
     prepared = prepare_config(CFG_PATH)
     cfg = load_config(CFG_PATH)
 
-    assert diagnostics == []
+    assert not has_error(diagnostics)
+    assert any(item.path == "parameters.transformer" for item in diagnostics)
     assert prepared.version == "swat"
     assert prepared.expanded_raw["version"] == "general"
     assert "reporter" not in prepared.expanded_raw

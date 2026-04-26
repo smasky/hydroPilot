@@ -14,14 +14,8 @@ HydroPilot 是：
 
 - 一个由配置驱动的工作流框架
 - 一个面向重复模型实验的可复用运行时
-- 一个不绑定单一模型家族的通用 schema
+- 一个不绑定单一模型家族的通用结构
 - 一个可以让特定模型更容易接入的模板体系
-
-HydroPilot 不是：
-
-- 一个只服务于 SWAT 的脚本集合
-- 一个单独的优化器
-- 一个已经把所有模型模板都做完的多模型平台
 
 ## 当前状态
 
@@ -36,6 +30,7 @@ HydroPilot 不是：
 - SQLite 与 CSV 结果记录
 - UQPyL 集成
 - `hydropilot-validate` CLI
+- `hydropilot-test` CLI，用于执行单次配置测试
 
 目前应视为规划中、而不是已内置支持的内容：
 
@@ -79,7 +74,13 @@ HydroPilot 的目标，就是把这些重复劳动收敛成一条可复现的统
 
 需要 Python 3.10+。
 
-以 editable 方式安装：
+HydroPilot 已发布到 PyPI：
+
+```bash
+pip install hydropilot
+```
+
+从源码进行本地开发时，可以使用 editable 方式安装：
 
 ```bash
 pip install -e .
@@ -105,11 +106,21 @@ pip install -e .[uqpyl]
 hydropilot-validate path/to/config.yaml
 ```
 
+### 用外部模型测试配置文件
+
+```bash
+hydropilot-test path/to/config.yaml
+```
+
+测试命令会使用一组确定性的参数向量跑完整运行时流程，
+强制 `parallel = 1`，保留运行时项目副本，并在本次运行的
+`archive` 目录下写出 `test-report.md`。
+
 ### 使用 `SimModel` 评估参数向量
 
 ```python
 import numpy as np
-from hydro_pilot import SimModel
+from hydropilot import SimModel
 
 X = np.array([
     [50.0, 0.5, 100.0],
@@ -123,7 +134,7 @@ with SimModel("examples/test_monthly.yaml") as model:
 ### 与 UQPyL 配合使用
 
 ```python
-from hydro_pilot.integrations import UQPyLAdapter
+from hydropilot.integrations import UQPyLAdapter
 from UQPyL.optimization import DE
 
 with UQPyLAdapter("examples/test_daily.yaml") as problem:
@@ -190,6 +201,21 @@ objectives:
     ref: nse_flow
     sense: max
 ```
+
+对 `writerType: fixed_width`，`file.maxNum` 表示从 `start` 开始最多扫描多少个相邻 fixed-width 字段。如果只想写入其中一个扫描结果，可以加 `file.selectIndex`：
+
+```yaml
+file:
+  name: model.inp
+  line: 12
+  start: 1
+  width: 10
+  precision: 4
+  maxNum: 10
+  selectIndex: 2
+```
+
+不写 `selectIndex` 时，会写入所有扫描到的 entry。写了 `selectIndex` 时，只写这个从 1 开始计数的 entry；如果某些目标文件没有这个 entry，会跳过这些文件；如果所有目标文件都没有，则直接报错。
 
 ## 模板示例
 
@@ -314,7 +340,7 @@ Parameter writing
 ## 仓库结构
 
 ```text
-src/hydro_pilot/
+src/hydropilot/
   api/           公共 API 入口
   cli/           命令行入口
   config/        配置加载、schema、路径解析
@@ -359,9 +385,10 @@ src/hydro_pilot/
 
 ## CLI 现状
 
-目前文档里可以明确承诺的内置 CLI 只有：
+目前文档里可以明确承诺的内置 CLI 有：
 
 - `hydropilot-validate`
+- `hydropilot-test`
 
 像 `run`、`expand` 这样的命令，现阶段更适合继续放在 roadmap，而不是写成已经存在的正式入口。
 

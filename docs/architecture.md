@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture that exists in the current HydroPilot codebase. It is intentionally implementation-oriented: the goal is to explain the real execution path in `src/hydro_pilot`, not an idealized future design.
+This document describes the architecture that exists in the current HydroPilot codebase. It is intentionally implementation-oriented: the goal is to explain the real execution path in `src/hydropilot`, not an idealized future design.
 
 ## Overview
 
@@ -35,7 +35,7 @@ These chains are related but not identical.
 The main runtime-facing modules are:
 
 ```text
-src/hydro_pilot/
+src/hydropilot/
   api/           public entry points such as SimModel
   cli/           command-line interfaces
   config/        config loading, path resolution, schema conversion
@@ -140,7 +140,7 @@ The current CLI command is a thin wrapper around the validation entry point.
 
 ```text
 hydropilot-validate
-  -> hydro_pilot.cli.validate.main()
+  -> hydropilot.cli.validate.main()
   -> validate_config()
   -> prepare_config()
 ```
@@ -439,16 +439,16 @@ That separation is what allows HydroPilot to support both:
 
 If you are new to the codebase, read the modules in this order:
 
-1. `src/hydro_pilot/api/sim_model.py`
-2. `src/hydro_pilot/config/loader.py`
-3. `src/hydro_pilot/runtime/session.py`
-4. `src/hydro_pilot/runtime/executor.py`
-5. `src/hydro_pilot/runtime/services.py`
-6. `src/hydro_pilot/reporting/reporter.py`
+1. `src/hydropilot/api/sim_model.py`
+2. `src/hydropilot/config/loader.py`
+3. `src/hydropilot/runtime/session.py`
+4. `src/hydropilot/runtime/executor.py`
+5. `src/hydropilot/runtime/services.py`
+6. `src/hydropilot/reporting/reporter.py`
 
 If you are debugging config issues, start here instead:
 
-1. `src/hydro_pilot/validation/entry.py`
-2. `src/hydro_pilot/validation/general.py`
-3. `src/hydro_pilot/config/loader.py`
-4. `src/hydro_pilot/models/swat/validate.py`
+1. `src/hydropilot/validation/entry.py`
+2. `src/hydropilot/validation/general.py`
+3. `src/hydropilot/config/loader.py`
+4. `src/hydropilot/models/swat/validate.py`

@@ -17,12 +17,6 @@ HydroPilot is:
 - a general schema that is not tied to one model family
 - a template system that can make specific models easier to configure
 
-HydroPilot is not:
-
-- a SWAT-only script bundle
-- an optimizer by itself
-- a finished multi-model platform with every template already implemented
-
 ## Current status
 
 What is already available in code today:
@@ -36,6 +30,7 @@ What is already available in code today:
 - SQLite and CSV run reporting
 - UQPyL integration
 - `hydropilot-validate` CLI
+- `hydropilot-test` CLI for one-run configuration tests
 
 What is planned rather than built-in today:
 
@@ -79,7 +74,13 @@ Use a template version such as `version: swat` when you want a shorter model-spe
 
 Requires Python 3.10+.
 
-Install the package in editable mode:
+HydroPilot is available on PyPI:
+
+```bash
+pip install hydropilot
+```
+
+For local development from a source checkout, install the package in editable mode:
 
 ```bash
 pip install -e .
@@ -105,11 +106,21 @@ pip install -e .[uqpyl]
 hydropilot-validate path/to/config.yaml
 ```
 
+### Test a configuration with the external model
+
+```bash
+hydropilot-test path/to/config.yaml
+```
+
+The test command runs one deterministic parameter vector through the full runtime,
+forces `parallel = 1`, keeps the runtime project copy, and writes
+`test-report.md` under the run archive.
+
 ### Evaluate parameter vectors with `SimModel`
 
 ```python
 import numpy as np
-from hydro_pilot import SimModel
+from hydropilot import SimModel
 
 X = np.array([
     [50.0, 0.5, 100.0],
@@ -123,7 +134,7 @@ with SimModel("examples/test_monthly.yaml") as model:
 ### Use with UQPyL
 
 ```python
-from hydro_pilot.integrations import UQPyLAdapter
+from hydropilot.integrations import UQPyLAdapter
 from UQPyL.optimization import DE
 
 with UQPyLAdapter("examples/test_daily.yaml") as problem:
@@ -190,6 +201,25 @@ objectives:
     ref: nse_flow
     sense: max
 ```
+
+For `writerType: fixed_width`, `file.maxNum` tells the writer how many adjacent
+fixed-width fields to scan from `start`. Add `file.selectIndex` when only one
+scanned entry should be written:
+
+```yaml
+file:
+  name: model.inp
+  line: 12
+  start: 1
+  width: 10
+  precision: 4
+  maxNum: 10
+  selectIndex: 2
+```
+
+If `selectIndex` is omitted, all scanned entries are written. If it is present,
+HydroPilot writes only that 1-based entry; target files where the entry does not
+exist are skipped, and an error is raised if no target file contains it.
 
 ## Template example
 
@@ -317,7 +347,7 @@ Parameter writing
 ## Repository layout
 
 ```text
-src/hydro_pilot/
+src/hydropilot/
   api/           public API entry points
   cli/           command-line interfaces
   config/        config loading, schema, path resolution

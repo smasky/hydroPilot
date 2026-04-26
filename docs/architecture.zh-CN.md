@@ -1,7 +1,7 @@
 # 架构设计
 
 本文档描述的是 HydroPilot 当前代码库里已经存在的架构。
-重点是解释 `src/hydro_pilot` 中真实的执行路径，方便阅读、调试和后续扩展。
+重点是解释 `src/hydropilot` 中真实的执行路径，方便阅读、调试和后续扩展。
 
 ## 总览
 
@@ -36,7 +36,7 @@ HydroPilot 可以拆成两条主要链路：
 当前运行时相关的主要模块如下：
 
 ```text
-src/hydro_pilot/
+src/hydropilot/
   api/           对外公开入口，例如 SimModel
   cli/           命令行接口
   config/        配置加载、路径解析、schema 转换
@@ -141,7 +141,7 @@ SimModel(...)
 
 ```text
 hydropilot-validate
-  -> hydro_pilot.cli.validate.main()
+  -> hydropilot.cli.validate.main()
   -> validate_config()
   -> prepare_config()
 ```
@@ -440,16 +440,16 @@ HydroPilot 当前是在“run 级别”做并行。
 
 如果你第一次阅读代码，建议按这个顺序看：
 
-1. `src/hydro_pilot/api/sim_model.py`
-2. `src/hydro_pilot/config/loader.py`
-3. `src/hydro_pilot/runtime/session.py`
-4. `src/hydro_pilot/runtime/executor.py`
-5. `src/hydro_pilot/runtime/services.py`
-6. `src/hydro_pilot/reporting/reporter.py`
+1. `src/hydropilot/api/sim_model.py`
+2. `src/hydropilot/config/loader.py`
+3. `src/hydropilot/runtime/session.py`
+4. `src/hydropilot/runtime/executor.py`
+5. `src/hydropilot/runtime/services.py`
+6. `src/hydropilot/reporting/reporter.py`
 
 如果你是在排查配置问题，建议从这里开始：
 
-1. `src/hydro_pilot/validation/entry.py`
-2. `src/hydro_pilot/validation/general.py`
-3. `src/hydro_pilot/config/loader.py`
-4. `src/hydro_pilot/models/swat/validate.py`
+1. `src/hydropilot/validation/entry.py`
+2. `src/hydropilot/validation/general.py`
+3. `src/hydropilot/config/loader.py`
+4. `src/hydropilot/models/swat/validate.py`

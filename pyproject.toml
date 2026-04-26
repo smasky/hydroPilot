@@ -34,7 +34,8 @@ Repository = "https://github.com/smasky/hydroPilot"
 Issues = "https://github.com/smasky/hydroPilot/issues"
 
 [project.scripts]
-hydropilot-validate = "hydro_pilot.cli.validate:main"
+hydropilot-validate = "hydropilot.cli.validate:main"
+hydropilot-test = "hydropilot.cli.test:main"
 
 [project.optional-dependencies]
 uqpyl = ["UQPyL"]
@@ -47,10 +48,10 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["hydro_pilot*"]
+include = ["hydropilot*"]
 
 [tool.setuptools.package-data]
-hydro_pilot = [
+hydropilot = [
     "models/swat/*.yaml",
 ]
 

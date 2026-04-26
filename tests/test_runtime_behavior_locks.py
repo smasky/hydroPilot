@@ -10,16 +10,16 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from hydro_pilot.runtime.context import apply_on_error_defaults
-from hydro_pilot.runtime.errors import RunError
-from hydro_pilot.runtime import Executor, Session
-from hydro_pilot.evaluation import Evaluator
-from hydro_pilot.params import ParamApplier, ParamSpace, ParamWritePlan
-from hydro_pilot.series import ObsStore, SeriesExtractor, SeriesPlan
-from hydro_pilot.api import BatchRunResult
-from hydro_pilot.reporting.records import build_csv_fields, collect_error_entries, parse_report_ids
-from hydro_pilot.config.schema.parameters import ParametersSpec
-from hydro_pilot.config.schema.series import ReaderSpec
+from hydropilot.runtime.context import apply_on_error_defaults
+from hydropilot.runtime.errors import RunError
+from hydropilot.runtime import Executor, Session
+from hydropilot.evaluation import Evaluator
+from hydropilot.params import ParamApplier, ParamSpace, ParamWritePlan
+from hydropilot.series import ObsStore, SeriesExtractor, SeriesPlan
+from hydropilot.api import BatchRunResult
+from hydropilot.reporting.records import build_csv_fields, collect_error_entries, parse_report_ids
+from hydropilot.config.schema.parameters import ParametersSpec
+from hydropilot.config.schema.series import ReaderSpec
 
 
 def _ns(**kwargs):
@@ -130,6 +130,20 @@ def test_session_close_keeps_instances_when_requested():
 
     assert session.reporter.closed is True
     assert session.workspace.cleanup_count == 0
+
+
+def test_session_reporter_uses_physical_parameter_labels_without_transformer():
+    cfg = _ns(
+        parameters=_ns(
+            transformer=None,
+            physical=[
+                _ns(name="p1"),
+                _ns(name="p2"),
+            ],
+        )
+    )
+
+    assert Session._physical_parameter_labels(cfg) == ["p1", "p2"]
 
 
 def test_param_manager_locks_clamp_warning_aggregation(tmp_path: Path):

@@ -13,6 +13,7 @@ class FixedWidthFileSpec:
     width: int
     precision: int
     maxNum: int
+    selectIndex: Optional[int] = None
 
 
 @dataclass
@@ -35,6 +36,8 @@ class FixedWidthWriterSpec:
 class SubEntry:
     offset: int
     original_val: float
+    line: int
+    start: int
 
 
 @dataclass
@@ -48,6 +51,7 @@ class Parameter:
     width: int
     lb: Optional[float] = None
     ub: Optional[float] = None
+    selectIndex: Optional[int] = None
 
 
 @dataclass
@@ -107,6 +111,8 @@ class FixedWidthWriter(ParamWriter):
         if precision is None:
             raise ValueError("missing fixed_width field 'precision'")
         max_num = int(file_spec.get("maxNum", 1))
+        raw_select_index = file_spec.get("selectIndex")
+        select_index = int(raw_select_index) if raw_select_index is not None else None
         if int(start) <= 0:
             raise ValueError("fixed_width start must be a positive integer")
         if int(width) <= 0:
@@ -115,6 +121,10 @@ class FixedWidthWriter(ParamWriter):
             raise ValueError("fixed_width precision must be a non-negative integer")
         if max_num < 1:
             raise ValueError("fixed_width maxNum must be >= 1")
+        if select_index is not None and select_index < 1:
+            raise ValueError("fixed_width selectIndex must be >= 1")
+        if select_index is not None and select_index > max_num:
+            raise ValueError("fixed_width selectIndex must be <= maxNum")
         return FixedWidthWriterSpec(
             name=name,
             type=int(raw_spec.get("type", 0)) if isinstance(raw_spec.get("type"), int) else {"float": 0, "int": 1, "discrete": 2}.get(raw_spec.get("type", "float"), 0),
@@ -126,6 +136,7 @@ class FixedWidthWriter(ParamWriter):
                 width=int(width),
                 precision=int(precision),
                 maxNum=max_num,
+                selectIndex=select_index,
             ),
         )
 
@@ -193,6 +204,7 @@ class FixedWidthWriter(ParamWriter):
                     "width": lib_info.file.width,
                     "precision": lib_info.file.precision,
                     "maxNum": lib_info.file.maxNum,
+                    "selectIndex": lib_info.file.selectIndex,
                 },
             })
         name = spec.name
@@ -206,6 +218,7 @@ class FixedWidthWriter(ParamWriter):
         lb = lib_info.lb if hard_bound else None
         ub = lib_info.ub if hard_bound else None
         maxNum = lib_info.file.maxNum
+        selectIndex = lib_info.file.selectIndex
 
         if index in self.params:
             raise ValueError(
@@ -245,11 +258,22 @@ class FixedWidthWriter(ParamWriter):
                 width=width,
                 max_num=maxNum,
                 line_end_offset=line_end,
+                line=linePos,
+                start=staPos,
             )
 
             entries_list.extend(row_entries)
 
+        if selectIndex is not None:
+            entries_list = [
+                entry
+                for entry_index, entry in enumerate(entries_list, start=1)
+                if entry_index == selectIndex
+            ]
+
         if not entries_list:
+            if selectIndex is not None:
+                return False
             raise ValueError(
                 f"No writable entries found for parameter '{name}' "
                 f"in file '{Path(self.filepath).name}'. "
@@ -266,6 +290,7 @@ class FixedWidthWriter(ParamWriter):
             width=width,
             lb=lb,
             ub=ub,
+            selectIndex=selectIndex,
         )
 
         return True
@@ -279,13 +304,14 @@ class FixedWidthWriter(ParamWriter):
         self.file_content = bytearray(self.base_content)
         mods: List[Modification] = []
         clamp_events: List[dict] = []
+        write_records: List[dict] = []
 
         for idx, input_val in zip(indices, vals):
             p = self.params.get(idx)
             if not p:
                 continue
 
-            for e in p.entries:
+            for entry_index, e in enumerate(p.entries, start=1):
                 if p.mode == 0:
                     raw = e.original_val * (1.0 + float(input_val))
                 elif p.mode == 1:
@@ -316,6 +342,13 @@ class FixedWidthWriter(ParamWriter):
 
                 b = self._format_value(clamped, p.width, p.precision, p.typ)
                 mods.append(Modification(offset=e.offset, width=p.width, data=b))
+                write_records.append({
+                    "file": Path(output_filepath).name,
+                    "param": p.name if p.selectIndex is not None or len(p.entries) == 1 else f"{p.name}_{entry_index}",
+                    "old_value": e.original_val,
+                    "new_value": clamped,
+                    "locator": f"line={e.line};start={e.start};width={p.width}",
+                })
 
         for m in mods:
             self.file_content[m.offset: m.offset + m.width] = m.data
@@ -323,7 +356,10 @@ class FixedWidthWriter(ParamWriter):
         with open(output_filepath, "wb") as out:
             out.write(self.file_content)
 
-        return clamp_events
+        return {
+            "clamp_events": clamp_events,
+            "write_records": write_records,
+        }
 
     def _scan_entries(
         self,
@@ -331,6 +367,8 @@ class FixedWidthWriter(ParamWriter):
         width: int,
         max_num: int,
         line_end_offset: int,
+        line: int,
+        start: int,
     ) -> List[SubEntry]:
         entries: List[SubEntry] = []
 
@@ -345,6 +383,6 @@ class FixedWidthWriter(ParamWriter):
             if val is None:
                 break
 
-            entries.append(SubEntry(offset=curr_off, original_val=val))
+            entries.append(SubEntry(offset=curr_off, original_val=val, line=line, start=start + (i * width)))
 
         return entries

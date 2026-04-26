@@ -10,9 +10,9 @@ ROOT = os.path.join(os.path.dirname(__file__), "..", "src")
 sys.path.insert(0, ROOT)
 
 from pathlib import Path
-from hydro_pilot.models.swat.discovery import discover_swat_project
-from hydro_pilot.models.swat.variables import calcSwatOutputRows
-from hydro_pilot.config.schema.base import expand_row_ranges
+from hydropilot.models.swat.discovery import discover_swat_project
+from hydropilot.models.swat.variables import calcSwatOutputRows
+from hydropilot.config.schema.base import expand_row_ranges
 
 PROJECT_PATH = Path(r"E:\DJBasin\TxtInOutFSB")
 OUTPUT_FILE = PROJECT_PATH / "output.rch"

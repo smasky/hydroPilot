@@ -255,7 +255,10 @@ class RunReporter:
             xVals = to_1d_float_list(item.get("X", []))
             pVals = []
             if self.pLabels:
-                pArr = to_1d_float_list(item.get("P", []) or [])
+                pRaw = item.get("P", [])
+                if pRaw is None:
+                    pRaw = []
+                pArr = to_1d_float_list(pRaw)
                 for idx in range(len(self.pLabels)):
                     pVals.append(pArr[idx] if idx < len(pArr) else np.nan)
 

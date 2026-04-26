@@ -18,8 +18,9 @@ def _requires_swat_validation_project():
         pytest.skip(f"SWAT validation project not found: {SWAT_VALIDATION_PROJECT}")
 
 
-from hydro_pilot.config.loader import load_config, prepare_config
-from hydro_pilot.validation.entry import validate_config
+from hydropilot.config.loader import load_config, prepare_config
+from hydropilot.models.swat.validate import AMBIGUOUS_SWAT_PARAMETER_ALIASES, validate_swat_config
+from hydropilot.validation.entry import validate_config
 
 
 def test_validate_general_config_success(tmp_path: Path):
@@ -87,6 +88,81 @@ def test_validate_general_config_success(tmp_path: Path):
     assert resolved["version"] == "general"
     assert resolved["basic"]["keepInstances"] is False
     assert "configPath" not in resolved["basic"]
+    assert "sets" not in resolved["parameters"]["design"][0]
+    assert "sets" not in resolved["parameters"]["physical"][0]
+
+
+def test_general_resolved_config_uses_stable_top_level_order(tmp_path: Path):
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": ".",
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [{"name": "x1", "bounds": [0, 1]}],
+            "physical": [{
+                "name": "x1",
+                "type": "float",
+                "bounds": [0, 1],
+                "writerType": "fixed_width",
+                "file": {
+                    "name": "params.txt",
+                    "line": 1,
+                    "start": 1,
+                    "width": 10,
+                    "precision": 2,
+                },
+            }],
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {
+                "file": "output.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+            "obs": {
+                "file": "obs.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+        }],
+        "functions": [{"name": "NSE", "kind": "builtin"}],
+        "derived": [{"id": "nse_flow", "call": {"func": "NSE", "args": ["flow.sim", "flow.obs"]}}],
+        "objectives": [{"id": "obj_nse", "ref": "nse_flow", "sense": "max"}],
+        "constraints": [],
+        "diagnostics": [{"id": "diag_nse", "ref": "nse_flow"}],
+        "reporter": {},
+    }
+
+    (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
+    config_path = tmp_path / "ordered.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    load_config(config_path)
+    resolved_path = config_path.with_name("ordered_general.yaml")
+    top_level = [
+        line.split(":", 1)[0]
+        for line in resolved_path.read_text(encoding="utf-8").splitlines()
+        if line and not line.startswith(" ") and ":" in line
+    ]
+
+    assert top_level == [
+        "version",
+        "basic",
+        "functions",
+        "parameters",
+        "series",
+        "derived",
+        "objectives",
+        "constraints",
+        "diagnostics",
+        "reporter",
+    ]
 
 
 def test_general_resolved_config_omits_absent_empty_optional_blocks(tmp_path: Path):
@@ -145,6 +221,106 @@ def test_general_resolved_config_omits_absent_empty_optional_blocks(tmp_path: Pa
     assert "derived" not in resolved
     assert "constraints" not in resolved
     assert "diagnostics" not in resolved
+
+
+def test_validate_general_config_reports_parameter_count_mismatch_without_transformer(tmp_path: Path):
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": ".",
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [
+                {"name": "x1", "bounds": [0, 1]},
+                {"name": "x2", "bounds": [0, 1]},
+            ],
+            "physical": [{
+                "name": "p1",
+                "type": "float",
+                "bounds": [0, 1],
+                "writerType": "fixed_width",
+                "file": {"name": "params.txt", "line": 1, "start": 1, "width": 10, "precision": 2},
+            }],
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {"file": "output.txt", "readerType": "text", "rowRanges": [[1, 3]], "colSpan": [1, 10]},
+            "obs": {"file": "obs.txt", "readerType": "text", "rowRanges": [[1, 3]], "colSpan": [1, 10]},
+        }],
+        "functions": [],
+        "derived": [],
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
+        "reporter": {},
+    }
+
+    (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
+    config_path = tmp_path / "mismatch.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    diagnostics = validate_config(config_path)
+
+    assert diagnostics
+    assert diagnostics[0].level == "error"
+    assert diagnostics[0].path == "parameters"
+    assert "without parameters.transformer" in diagnostics[0].message
+
+
+def test_validate_general_config_warns_parameter_count_mismatch_with_transformer(tmp_path: Path):
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": ".",
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "transformer": "expand_params",
+            "design": [{"name": "x1", "bounds": [0, 1]}],
+            "physical": [
+                {
+                    "name": "p1",
+                    "type": "float",
+                    "bounds": [0, 1],
+                    "writerType": "fixed_width",
+                    "file": {"name": "params.txt", "line": 1, "start": 1, "width": 10, "precision": 2},
+                },
+                {
+                    "name": "p2",
+                    "type": "float",
+                    "bounds": [0, 1],
+                    "writerType": "fixed_width",
+                    "file": {"name": "params.txt", "line": 1, "start": 11, "width": 10, "precision": 2},
+                },
+            ],
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {"file": "output.txt", "readerType": "text", "rowRanges": [[1, 3]], "colSpan": [1, 10]},
+            "obs": {"file": "obs.txt", "readerType": "text", "rowRanges": [[1, 3]], "colSpan": [1, 10]},
+        }],
+        "functions": [{"name": "expand_params", "kind": "external", "file": "transform.py", "args": ["X"]}],
+        "derived": [],
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
+        "reporter": {},
+    }
+
+    (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
+    (tmp_path / "transform.py").write_text("def expand_params(X):\n    return [X[0], X[0]]\n", encoding="utf-8")
+    config_path = tmp_path / "transformer_mismatch.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    diagnostics = validate_config(config_path)
+
+    assert diagnostics
+    assert diagnostics[0].level == "warning"
+    assert diagnostics[0].path == "parameters.transformer"
+    assert "transformer must return 2 physical parameter values" in diagnostics[0].message
 
 
 def test_validate_general_config_reports_missing_obs_column_with_series_id(tmp_path: Path):
@@ -311,6 +487,65 @@ def test_validate_general_config_reports_missing_physical_precision(tmp_path: Pa
     assert len(diagnostics) == 1
     assert diagnostics[0].path == "parameters.physical[x1]"
     assert diagnostics[0].message == "missing fixed_width field 'precision'"
+
+
+def test_validate_general_config_reports_fixed_width_select_index_greater_than_max_num(tmp_path: Path):
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": ".",
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [{"name": "x1", "bounds": [0, 1]}],
+            "physical": [{
+                "name": "x1",
+                "type": "float",
+                "bounds": [0, 1],
+                "writerType": "fixed_width",
+                "file": {
+                    "name": "params.txt",
+                    "line": 1,
+                    "start": 1,
+                    "width": 10,
+                    "precision": 2,
+                    "maxNum": 3,
+                    "selectIndex": 4,
+                },
+            }],
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {
+                "file": "output.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+            "obs": {
+                "file": "obs.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+        }],
+        "functions": [],
+        "derived": [],
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
+        "reporter": {},
+    }
+    (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
+    config_path = tmp_path / "bad_select_index.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    diagnostics = validate_config(config_path)
+
+    assert len(diagnostics) == 1
+    assert diagnostics[0].path == "parameters.physical[x1]"
+    assert diagnostics[0].message == "fixed_width selectIndex must be <= maxNum"
 
 
 def test_validate_general_config_reports_unknown_reader_type(tmp_path: Path):
@@ -875,12 +1110,69 @@ def test_validate_swat_config_reports_unknown_design_parameter(tmp_path: Path):
     assert diagnostics[0].path == "parameters.design[NOT_A_SWAT_PARAM]"
 
 
+def test_validate_swat_config_reports_ambiguous_parameter_name(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "file.cio").write_text("", encoding="utf-8")
+    (project / "fig.fig").write_text("", encoding="utf-8")
 
+    config = {
+        "version": "swat",
+        "basic": {
+            "projectPath": str(project),
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [{"name": "ESCO", "bounds": [0, 1]}],
+        },
+        "series": [],
+    }
+
+    diagnostics = validate_swat_config(config, tmp_path)
+
+    assert diagnostics
+    assert diagnostics[0].path == "parameters.design[ESCO]"
+    assert "ambiguous SWAT parameter name" in diagnostics[0].message
+    assert "ESCO_BSN" in diagnostics[0].suggestion
+    assert "ESCO_HRU" in diagnostics[0].suggestion
+
+
+def test_validate_swat_config_reports_ambiguous_parameter_alias_library(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "file.cio").write_text("", encoding="utf-8")
+    (project / "fig.fig").write_text("", encoding="utf-8")
+
+    config = {
+        "version": "swat",
+        "basic": {
+            "projectPath": str(project),
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [{"name": name, "bounds": [0, 1]} for name in sorted(AMBIGUOUS_SWAT_PARAMETER_ALIASES)],
+        },
+        "series": [],
+    }
+
+    diagnostics = validate_swat_config(config, tmp_path)
+    by_path = {item.path: item for item in diagnostics}
+
+    for name, candidates in AMBIGUOUS_SWAT_PARAMETER_ALIASES.items():
+        diagnostic = by_path[f"parameters.design[{name}]"]
+        assert "ambiguous SWAT parameter name" in diagnostic.message
+        for candidate in candidates:
+            assert candidate in diagnostic.suggestion
+
+
+def test_validate_cli_reports_yaml_root_error(tmp_path: Path):
     config_path = tmp_path / "bad.yaml"
     config_path.write_text("[]\n", encoding="utf-8")
 
     result = subprocess.run(
-        [sys.executable, "-m", "hydro_pilot.cli.validate", str(config_path)],
+        [sys.executable, "-m", "hydropilot.cli.validate", str(config_path)],
         cwd=SRC,
         capture_output=True,
         text=True,
@@ -942,7 +1234,7 @@ def test_validate_cli_prints_success_message(tmp_path: Path):
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
 
     result = subprocess.run(
-        [sys.executable, "-m", "hydro_pilot.cli.validate", str(config_path)],
+        [sys.executable, "-m", "hydropilot.cli.validate", str(config_path)],
         cwd=SRC,
         capture_output=True,
         text=True,

@@ -18,6 +18,7 @@ class ParamApplier:
 
         work_root = Path(work_path)
         all_clamp_events: List[dict] = []
+        all_write_records: List[dict] = []
 
         for (_task_file, _writer_type), task in self.write_plan.write_tasks.items():
             file_name = task["fileName"]
@@ -33,8 +34,12 @@ class ParamApplier:
                         message=f"Data source has {len(data_source)} items, but requested index {max(indices)} for file '{file_name}'.",
                     )
                 values_to_write = data_source[indices]
-                clamp_events = handler.set_values_and_save(str(target_file), indices, values_to_write)
-                all_clamp_events.extend(clamp_events)
+                write_result = handler.set_values_and_save(str(target_file), indices, values_to_write)
+                if isinstance(write_result, dict):
+                    all_clamp_events.extend(write_result.get("clamp_events", []))
+                    all_write_records.extend(write_result.get("write_records", []))
+                else:
+                    all_clamp_events.extend(write_result)
             except RunError:
                 raise
             except Exception as e:
@@ -45,6 +50,7 @@ class ParamApplier:
                     message=f"Error writing to file {file_name}: {str(e)}",
                 )
 
+        env["param.writeRecords"] = all_write_records
         self._aggregate_clamp_warnings(all_clamp_events, env)
 
     def get_physical_params(self, X):

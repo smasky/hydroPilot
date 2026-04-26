@@ -2,8 +2,8 @@ from pathlib import Path
 
 import yaml
 
-from hydro_pilot.config.loader import ConfigPreparationError, prepare_config
-from hydro_pilot.validation.diagnostics import Diagnostic, error
+from hydropilot.config.loader import ConfigPreparationError, prepare_config
+from hydropilot.validation.diagnostics import Diagnostic, error
 
 
 def validate_config(config_path: Path) -> list[Diagnostic]:
@@ -12,7 +12,7 @@ def validate_config(config_path: Path) -> list[Diagnostic]:
         return [error("config", f"Config file not found: {yaml_file}")]
 
     try:
-        prepare_config(yaml_file)
+        prepared = prepare_config(yaml_file)
     except ConfigPreparationError as exc:
         return exc.diagnostics
     except yaml.YAMLError as exc:
@@ -21,4 +21,4 @@ def validate_config(config_path: Path) -> list[Diagnostic]:
         return [error("config", str(exc))]
     except FileNotFoundError as exc:
         return [error("config", str(exc))]
-    return []
+    return prepared.diagnostics

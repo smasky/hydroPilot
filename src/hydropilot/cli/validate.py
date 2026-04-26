@@ -1,8 +1,8 @@
 import argparse
 from pathlib import Path
 
-from hydro_pilot.validation.entry import validate_config
-from hydro_pilot.validation.diagnostics import has_error
+from hydropilot.validation.entry import validate_config
+from hydropilot.validation.diagnostics import has_error
 
 
 def main() -> int:

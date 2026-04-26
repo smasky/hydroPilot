@@ -15,10 +15,7 @@ class Session:
         self.workspace = Workspace(cfg, cfg_path)
         self.executor = Executor(cfg, self.workspace, reporter=None)
 
-        pLabels = []
-        if self.cfg.parameters.transformer:
-            pLabels = [p.name for p in self.cfg.parameters.physical]
-
+        pLabels = self._physical_parameter_labels(self.cfg)
         self.reporter = RunReporter(self.workspace.archivePath, self.xLabels, pLabels, self.cfg)
         self.reporter.start()
         self.executor.reporter = self.reporter
@@ -77,6 +74,10 @@ class Session:
     @property
     def archivePath(self):
         return self.workspace.archivePath
+
+    @staticmethod
+    def _physical_parameter_labels(cfg):
+        return [p.name for p in cfg.parameters.physical]
 
     def run(self, X):
         return self.executor.run(X)

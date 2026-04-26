@@ -5,7 +5,7 @@ import numpy as np
 ROOT = os.path.join(os.path.dirname(__file__), "..", "src")
 sys.path.insert(0, ROOT)
 
-from hydro_pilot import SimModel
+from hydropilot import SimModel
 
 CFG_PATH = os.path.join(os.path.dirname(__file__), "..", "examples", "test_monthly_series_warning.yaml")
 

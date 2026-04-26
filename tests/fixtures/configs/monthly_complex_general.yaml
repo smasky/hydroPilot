@@ -6,28 +6,42 @@ basic:
   timeout: -1
   parallel: 1
   keepInstances: false
+functions:
+  - name: NSE
+    kind: builtin
+    args: []
+  - name: KGE
+    kind: builtin
+    args: []
+  - name: RMSE
+    kind: builtin
+    args: []
+  - name: monthly_transform
+    kind: external
+    args: [X]
+    file: E:\hydroPilot\examples\monthly_transform.py
+  - name: calc_annual_tn_load
+    kind: external
+    args: [tn_sim]
+    file: E:\hydroPilot\examples\calc_tn_load.py
 parameters:
   design:
     - index: 0
       name: CN2_factor
       type: float
       bounds: [0.8, 1.2]
-      sets: []
     - index: 1
       name: ESCO_val
       type: float
       bounds: [0.5, 0.95]
-      sets: []
     - index: 2
       name: GW_DELAY_val
       type: float
       bounds: [10.0, 500.0]
-      sets: []
     - index: 3
       name: SURLAG_val
       type: float
       bounds: [0.5, 24.0]
-      sets: []
   physical:
     - index: 0
       name: CN2
@@ -354,7 +368,6 @@ parameters:
         width: 16
         precision: 2
         maxNum: 1
-      sets: []
     - index: 1
       name: CN2
       type: float
@@ -516,7 +529,6 @@ parameters:
         width: 16
         precision: 2
         maxNum: 1
-      sets: []
     - index: 2
       name: ESCO_HRU
       type: float
@@ -530,7 +542,6 @@ parameters:
         width: 16
         precision: 3
         maxNum: 1
-      sets: []
     - index: 3
       name: ESCO_HRU
       type: float
@@ -544,7 +555,6 @@ parameters:
         width: 16
         precision: 3
         maxNum: 1
-      sets: []
     - index: 4
       name: GW_DELAY
       type: float
@@ -558,7 +568,6 @@ parameters:
         width: 16
         precision: 4
         maxNum: 1
-      sets: []
     - index: 5
       name: SURLAG_BSN
       type: float
@@ -572,7 +581,6 @@ parameters:
         width: 16
         precision: 3
         maxNum: 1
-      sets: []
   hardBound: true
   transformer: monthly_transform
 series:
@@ -610,39 +618,6 @@ series:
         - [1, 36]
       colSpan: [1, 12]
       readerType: text
-objectives:
-  - id: obj_nse_flow
-    ref: nse_flow
-    desc: Maximize NSE for flow
-    sense: max
-    on_error: -.inf
-  - id: obj_nse_tn
-    ref: nse_tn
-    desc: Maximize NSE for TN
-    sense: max
-    on_error: -.inf
-reporter:
-  flushInterval: 50
-  holdingPenLimit: 20
-  series: []
-functions:
-  - name: NSE
-    kind: builtin
-    args: []
-  - name: KGE
-    kind: builtin
-    args: []
-  - name: RMSE
-    kind: builtin
-    args: []
-  - name: monthly_transform
-    kind: external
-    args: [X]
-    file: E:\hydroPilot\examples\monthly_transform.py
-  - name: calc_annual_tn_load
-    kind: external
-    args: [tn_sim]
-    file: E:\hydroPilot\examples\calc_tn_load.py
 derived:
   - id: nse_flow
     desc: nse_flow
@@ -669,6 +644,17 @@ derived:
     call:
       func: calc_annual_tn_load
       args: [tn.sim]
+objectives:
+  - id: obj_nse_flow
+    ref: nse_flow
+    desc: Maximize NSE for flow
+    sense: max
+    on_error: -.inf
+  - id: obj_nse_tn
+    ref: nse_tn
+    desc: Maximize NSE for TN
+    sense: max
+    on_error: -.inf
 diagnostics:
   - id: diag_kge
     ref: kge_flow
@@ -682,3 +668,7 @@ diagnostics:
     ref: annual_tn
     name: Annual TN load
     on_error: .nan
+reporter:
+  flushInterval: 50
+  holdingPenLimit: 20
+  series: []

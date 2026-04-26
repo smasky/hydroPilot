@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to Claude Code when working in this repository.
 
@@ -34,7 +34,7 @@ HydroPilot 是一个配置优先的水文模型实验编排框架。它把以下
 当前真实源码结构如下：
 
 ```text
-src/hydro_pilot/
+src/hydropilot/
   api/           # 对外 API，当前主要是 SimModel
   cli/           # 命令行入口，当前已有 hydropilot-validate
   config/        # 配置加载、路径解析、schema、RunConfig
@@ -64,7 +64,7 @@ src/hydro_pilot/
 
 ### 1. 配置链路
 
-当前配置入口在 `src/hydro_pilot/config/loader.py`：
+当前配置入口在 `src/hydropilot/config/loader.py`：
 
 ```text
 YAML
@@ -82,7 +82,7 @@ YAML
 
 ### 2. 运行时链路
 
-当前运行入口在 `src/hydro_pilot/api/sim_model.py`：
+当前运行入口在 `src/hydropilot/api/sim_model.py`：
 
 ```text
 SimModel
@@ -162,8 +162,8 @@ X
 
 当前用户可见的校验入口在：
 
-- `src/hydro_pilot/validation/general.py`
-- `src/hydro_pilot/models/swat/validate.py`
+- `src/hydropilot/validation/general.py`
+- `src/hydropilot/models/swat/validate.py`
 
 当前原则：
 
@@ -195,7 +195,7 @@ X
 
 ### RunError
 
-当前 `src/hydro_pilot/runtime/errors.py` 中的 `RunError` 支持：
+当前 `src/hydropilot/runtime/errors.py` 中的 `RunError` 支持：
 
 - `severity = "fatal"`
 - `severity = "warning"`
@@ -235,7 +235,7 @@ warning 会进入 `context["warnings"]`，不会直接中断整次运行。
 
 ## SWAT 模板层职责
 
-`src/hydro_pilot/models/swat/` 当前负责的是“把 SWAT 知识折叠进模板展开”，而不是承担通用运行时职责。
+`src/hydropilot/models/swat/` 当前负责的是“把 SWAT 知识折叠进模板展开”，而不是承担通用运行时职责。
 
 各模块大致职责：
 
@@ -253,15 +253,15 @@ warning 会进入 `context["warnings"]`，不会直接中断整次运行。
 当前公开 API / CLI 以这几个为准：
 
 - Python API:
-  - `from hydro_pilot import SimModel`
-  - `from hydro_pilot.integrations import UQPyLAdapter`
+  - `from hydropilot import SimModel`
+  - `from hydropilot.integrations import UQPyLAdapter`
 - CLI:
   - `hydropilot-validate`
 
 不要再使用旧 README 里那种路径：
 
-- `from hydro_pilot.sim_model import SimModel`
-- `from hydro_pilot.wrappers import UQPyLAdapter`
+- `from hydropilot.sim_model import SimModel`
+- `from hydropilot.wrappers import UQPyLAdapter`
 
 ## 常用命令
 
@@ -359,17 +359,17 @@ hydropilot-validate path/to/config.yaml
 
 要快速理解项目，建议按这个顺序看：
 
-1. `src/hydro_pilot/api/sim_model.py`
-2. `src/hydro_pilot/config/loader.py`
-3. `src/hydro_pilot/config/schema/run_config.py`
-4. `src/hydro_pilot/runtime/session.py`
-5. `src/hydro_pilot/runtime/executor.py`
-6. `src/hydro_pilot/runtime/services.py`
-7. `src/hydro_pilot/params/write_plan.py`
-8. `src/hydro_pilot/series/extractor.py`
-9. `src/hydro_pilot/evaluation/evaluator.py`
-10. `src/hydro_pilot/reporting/reporter.py`
-11. `src/hydro_pilot/models/swat/template.py`
+1. `src/hydropilot/api/sim_model.py`
+2. `src/hydropilot/config/loader.py`
+3. `src/hydropilot/config/schema/run_config.py`
+4. `src/hydropilot/runtime/session.py`
+5. `src/hydropilot/runtime/executor.py`
+6. `src/hydropilot/runtime/services.py`
+7. `src/hydropilot/params/write_plan.py`
+8. `src/hydropilot/series/extractor.py`
+9. `src/hydropilot/evaluation/evaluator.py`
+10. `src/hydropilot/reporting/reporter.py`
+11. `src/hydropilot/models/swat/template.py`
 
 ## 一句话总结当前项目状态
 

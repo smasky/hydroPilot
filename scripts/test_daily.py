@@ -10,7 +10,7 @@ import numpy as np
 ROOT = os.path.join(os.path.dirname(__file__), "..", "src")
 sys.path.insert(0, ROOT)
 
-from hydro_pilot.config.loader import load_config
+from hydropilot.config.loader import load_config
 
 
 def test_config_load():
@@ -45,7 +45,7 @@ def test_sim_model():
     print("Step 2: SimModel init + evaluate")
     print("=" * 60)
 
-    from hydro_pilot import SimModel
+    from hydropilot import SimModel
 
     cfg_path = os.path.join(os.path.dirname(__file__), "..", "examples", "test_daily.yaml")
     model = None
