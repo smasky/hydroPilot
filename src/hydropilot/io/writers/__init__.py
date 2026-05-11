@@ -1,5 +1,6 @@
 from .base import ParamWriter
 from .fixed_width import FixedWidthWriter
+from .csv import CsvWriter
 
 WRITER_REGISTRY: dict[str, type[ParamWriter]] = {}
 
@@ -16,3 +17,4 @@ def getWriter(writerType: str) -> type[ParamWriter]:
 
 
 registerWriter("fixed_width", FixedWidthWriter)
+registerWriter("csv", CsvWriter)

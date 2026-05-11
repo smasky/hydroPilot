@@ -6,7 +6,7 @@ import numpy as np
 from pydantic import BaseModel
 
 from ...config.paths import resolve_existing_file
-from ...config.schema.base import expand_row_ranges
+from ..rows import build_row_selection
 from .base import SeriesReader
 
 
@@ -70,24 +70,16 @@ class TextReader(SeriesReader):
         if file_name is None:
             raise ValueError("missing file path for extract")
 
-        rr_source = file_spec.get("rowRanges") if file_spec is not None and "rowRanges" in file_spec else raw_spec.get("rowRanges", [])
-        if rr_source and not isinstance(rr_source, list):
-            raise ValueError(f"rowRanges must be a list, got: {rr_source}")
-
-        row_ranges: List[List[int]] = []
-        for item in rr_source:
-            if not isinstance(item, list) or len(item) not in (2, 3):
-                raise ValueError(f"rowRanges item must be [start, end] or [start, end, step], got: {item}")
-            row_ranges.append([int(x) for x in item])
-
-        expanded_rows = expand_row_ranges(row_ranges) if row_ranges else []
-        row_list_source = file_spec.get("rowList") if file_spec is not None and "rowList" in file_spec else raw_spec.get("rowList", [])
-        if row_list_source and (not isinstance(row_list_source, list) or not all(isinstance(x, int) for x in row_list_source)):
-            raise ValueError(f"rowList must be a list of integers, got: {row_list_source}")
-
-        rows = sorted(set(expanded_rows + [int(x) for x in row_list_source]))
-        if not rows:
-            raise ValueError("missing row selection, expected rowRanges or rowList")
+        row_spec = dict(raw_spec)
+        if file_spec is not None:
+            if "rowRanges" in file_spec:
+                row_spec["rowRanges"] = file_spec["rowRanges"]
+            if "rowList" in file_spec:
+                row_spec["rowList"] = file_spec["rowList"]
+        rows = build_row_selection(
+            row_spec,
+            missing_message="missing row selection, expected rowRanges or rowList",
+        )
 
         if file_spec is not None and "colSpan" in file_spec:
             cs = file_spec["colSpan"]
@@ -130,7 +122,7 @@ class TextReader(SeriesReader):
             "file": resolved_file,
             "rows": rows,
             "column": column,
-            "size": int(raw_spec.get("size", len(rows))),
+            "size": len(rows),
             "readerType": str(raw_spec.get("readerType", raw_spec.get("reader_type", "text"))),
         })
 

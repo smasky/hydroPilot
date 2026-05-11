@@ -15,13 +15,16 @@ from hydropilot.validation.entry import validate_config
 from hydropilot.validation.diagnostics import has_error
 from hydropilot.io.writers import getWriter
 from hydropilot.io.writers.fixed_width import FixedWidthWriter
+from hydropilot.io.writers.csv import CsvWriter
 from hydropilot.io.readers import getReader
 from hydropilot.io.readers.text import TextReader
+from hydropilot.io.readers.csv import CsvReader
 from hydropilot.series import ObsStore, SeriesExtractor, SeriesPlan, SeriesPlanItem
 from hydropilot.models.swat.discovery import discover_swat_project
 from hydropilot.models.swat.library import SWAT_DB, SWAT_PARAM_LIBRARY
 from hydropilot.models.swat.series import buildSwatSeries, inferSwatOutputType
 from hydropilot.models.swat.variables import calcSwatOutputRows
+from hydropilot.models.swat.validate import validate_swat_config
 from hydropilot.runtime.errors import RunError
 
 CFG_PATH = ROOT / "tests" / "fixtures" / "configs" / "monthly_complex.yaml"
@@ -101,7 +104,7 @@ def test_swat_series_builder_extracts_monthly_rows_and_defaults():
     assert "id" not in sim
     assert "period" not in sim
     assert sim["rowRanges"]
-    assert result[0]["size"] == 36
+    assert "size" not in result[0]
     assert result[0]["obs"]["readerType"] == "text"
 
 
@@ -154,6 +157,101 @@ def test_swat_period_accepts_yaml_date_objects_for_monthly_rows():
 
     assert date_rows == month_rows
     assert date_rows["size"] == 34
+
+
+def test_validate_swat_config_rejects_sim_timestep_override(tmp_path: Path):
+    project = tmp_path / "TxtInOut"
+    project.mkdir()
+    (project / "file.cio").write_text("stub\n", encoding="utf-8")
+    (project / "fig.fig").write_text("stub\n", encoding="utf-8")
+
+    raw = {
+        "version": "swat",
+        "basic": {
+            "projectPath": str(project),
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {
+                "file": "output.rch",
+                "variable": "FLOW_OUT",
+                "id": 1,
+                "period": [2019, 2021],
+                "timestep": "monthly",
+            },
+            "obs": {
+                "file": "obs.txt",
+                "rowRanges": [[1, 36]],
+                "colSpan": [1, 12],
+            },
+        }],
+    }
+
+    diagnostics = validate_swat_config(
+        raw,
+        tmp_path,
+        meta_override={
+            "timestep": "monthly",
+            "output_start_year": 2019,
+            "output_end_year": 2021,
+            "n_subbasins": 3,
+            "subbasins": {},
+        },
+    )
+
+    assert len(diagnostics) == 1
+    assert diagnostics[0].level == "error"
+    assert diagnostics[0].path == "series[flow].sim.timestep"
+    assert diagnostics[0].message == "sim.timestep is not supported for SWAT; timestep is derived from project metadata"
+
+
+def test_validate_swat_config_warns_when_period_is_clipped_to_output_window(tmp_path: Path):
+    project = tmp_path / "TxtInOut"
+    project.mkdir()
+    (project / "file.cio").write_text("stub\n", encoding="utf-8")
+    (project / "fig.fig").write_text("stub\n", encoding="utf-8")
+
+    raw = {
+        "version": "swat",
+        "basic": {
+            "projectPath": str(project),
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {
+                "file": "output.rch",
+                "variable": "FLOW_OUT",
+                "id": 1,
+                "period": [2018, 2022],
+            },
+            "obs": {
+                "file": "obs.txt",
+                "rowRanges": [[1, 36]],
+                "colSpan": [1, 12],
+            },
+        }],
+    }
+
+    diagnostics = validate_swat_config(
+        raw,
+        tmp_path,
+        meta_override={
+            "timestep": "monthly",
+            "output_start_year": 2019,
+            "output_end_year": 2021,
+            "n_subbasins": 3,
+            "subbasins": {},
+        },
+    )
+
+    assert len(diagnostics) == 1
+    assert diagnostics[0].level == "warning"
+    assert diagnostics[0].path == "series[flow].sim.period"
+    assert "extends outside the SWAT output window [2019-01-01, 2021-12-31]" in diagnostics[0].message
 
 
 
@@ -304,9 +402,125 @@ def test_obs_variable_is_not_auto_resolved():
 
 def test_minimal_io_registries_dispatch_existing_implementations():
     assert getWriter("fixed_width") is FixedWidthWriter
+    assert getWriter("csv") is CsvWriter
     assert getReader("text") is TextReader
+    assert getReader("csv") is CsvReader
 
     with pytest.raises(ValueError, match="Unknown writer type"):
         getWriter("missing_writer")
     with pytest.raises(ValueError, match="Unknown reader type"):
         getReader("missing_reader")
+
+
+def test_csv_reader_extracts_column_after_head_skip_with_row_ranges_and_row_list(tmp_path: Path):
+    source = tmp_path / "output.csv"
+    source.write_text(
+        "date,q,et\n"
+        "1,10.5,0.1\n"
+        "2,11.5,0.2\n"
+        "3,12.5,0.3\n"
+        "4,13.5,0.4\n",
+        encoding="utf-8-sig",
+    )
+
+    spec = CsvReader.buildSpec(
+        {
+            "readerType": "csv",
+            "file": "output.csv",
+            "headSkip": 1,
+            "rowRanges": [[1, 2]],
+            "rowList": [4],
+            "colNum": 2,
+            "delimiter": ",",
+        },
+        base_path=tmp_path,
+        check_file=True,
+    )
+
+    values = CsvReader().read(None, spec)
+
+    assert values.tolist() == [10.5, 11.5, 13.5]
+
+
+def test_csv_reader_fails_when_selected_cell_is_not_numeric(tmp_path: Path):
+    source = tmp_path / "output.csv"
+    source.write_text("date,q\n1,bad\n", encoding="utf-8-sig")
+
+    spec = CsvReader.buildSpec(
+        {
+            "readerType": "csv",
+            "file": "output.csv",
+            "headSkip": 1,
+            "rowRanges": [[1, 1]],
+            "colNum": 2,
+        },
+        base_path=tmp_path,
+        check_file=True,
+    )
+
+    with pytest.raises(ValueError, match="csv value is not numeric"):
+        CsvReader().read(None, spec)
+
+
+def test_csv_writer_updates_selected_column_after_head_skip(tmp_path: Path):
+    source = tmp_path / "params.csv"
+    source.write_text(
+        "name,value,other\n"
+        "K,1.0,9\n"
+        "SM,2.0,8\n"
+        "WM,3.0,7\n",
+        encoding="utf-8-sig",
+    )
+
+    spec = CsvWriter.buildSpec({
+        "name": "K",
+        "type": "float",
+        "mode": "v",
+        "bounds": [0.0, 10.0],
+        "writerType": "csv",
+        "file": {
+            "name": "params.csv",
+            "headSkip": 1,
+            "rowRanges": [[1, 2]],
+            "colNum": 2,
+            "delimiter": ",",
+        },
+    })
+    param = type("ParamSpec", (), {"name": "K", "index": 0, "modeCode": 1})()
+    writer = CsvWriter(str(source))
+
+    assert writer.register_param(param, spec)
+    result = writer.set_values_and_save(str(source), [0], [5.25])
+
+    assert source.read_text(encoding="utf-8-sig").splitlines() == [
+        "name,value,other",
+        "K,5.25,9",
+        "SM,5.25,8",
+        "WM,3.0,7",
+    ]
+    assert [record["locator"] for record in result["write_records"]] == [
+        "row=1;col=2",
+        "row=2;col=2",
+    ]
+    assert not source.read_bytes().startswith(b"\xef\xbb\xbf")
+
+
+def test_csv_writer_fails_when_selected_cell_is_empty(tmp_path: Path):
+    source = tmp_path / "params.csv"
+    source.write_text("name,value\nK,\n", encoding="utf-8-sig")
+
+    spec = CsvWriter.buildSpec({
+        "name": "K",
+        "writerType": "csv",
+        "file": {
+            "name": "params.csv",
+            "headSkip": 1,
+            "rowRanges": [[1, 1]],
+            "colNum": 2,
+        },
+    })
+    param = type("ParamSpec", (), {"name": "K", "index": 0, "modeCode": 1})()
+    writer = CsvWriter(str(source))
+
+    with pytest.raises(ValueError, match="csv value is empty"):
+        writer.register_param(param, spec)

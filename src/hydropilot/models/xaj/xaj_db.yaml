@@ -1,0 +1,117 @@
+# XAJ knowledge database
+
+parameters:
+  KC:
+    type: float
+    bounds: [0.5, 2.0]
+    file: {name: parameters.csv, headSkip: 1, colNum: 4, delimiter: ",", precision: 3}
+
+  B:
+    type: float
+    bounds: [0.1, 0.4]
+    file: {name: parameters.csv, headSkip: 1, colNum: 5, delimiter: ",", precision: 1}
+
+  C:
+    type: float
+    bounds: [0.09, 0.20]
+    file: {name: parameters.csv, headSkip: 1, colNum: 6, delimiter: ",", precision: 2}
+
+  IMP:
+    type: float
+    bounds: [0.005, 0.50]
+    file: {name: parameters.csv, headSkip: 1, colNum: 7, delimiter: ",", precision: 3}
+
+  WM:
+    type: float
+    bounds: [80, 200]
+    file: {name: parameters.csv, headSkip: 1, colNum: 8, delimiter: ",", precision: 3}
+
+  WUM:
+    type: float
+    bounds: [5, 30]
+    file: {name: parameters.csv, headSkip: 1, colNum: 9, delimiter: ",", precision: 2}
+
+  WLM:
+    type: float
+    bounds: [40, 90]
+    file: {name: parameters.csv, headSkip: 1, colNum: 10, delimiter: ",", precision: 2}
+
+  SM:
+    type: float
+    bounds: [5, 50]
+    file: {name: parameters.csv, headSkip: 1, colNum: 11, delimiter: ",", precision: 2}
+
+  EX:
+    type: float
+    bounds: [1.0, 2.0]
+    file: {name: parameters.csv, headSkip: 1, colNum: 12, delimiter: ",", precision: 2}
+
+  KG:
+    type: float
+    bounds: [0.10, 0.50]
+    file: {name: parameters.csv, headSkip: 1, colNum: 13, delimiter: ",", precision: 2}
+
+  KI:
+    type: float
+    bounds: [0.10, 0.50]
+    file: {name: parameters.csv, headSkip: 1, colNum: 14, delimiter: ",", precision: 2}
+
+  CG:
+    type: float
+    bounds: [0.050, 0.999]
+    file: {name: parameters.csv, headSkip: 1, colNum: 15, delimiter: ",", precision: 3}
+
+  CI:
+    type: float
+    bounds: [0.010, 0.999]
+    file: {name: parameters.csv, headSkip: 1, colNum: 16, delimiter: ",", precision: 3}
+
+  CS:
+    type: float
+    bounds: [0.010, 0.999]
+    file: {name: parameters.csv, headSkip: 1, colNum: 17, delimiter: ",", precision: 3}
+
+  LAG:
+    type: float
+    bounds: [0, 5]
+    file: {name: parameters.csv, headSkip: 1, colNum: 18, delimiter: ",", precision: 1}
+
+  KE:
+    type: float
+    file: {name: parameters.csv, headSkip: 1, colNum: 19, delimiter: ",", precision: 2}
+
+  XE:
+    type: float
+    bounds: [0.10, 0.60]
+    file: {name: parameters.csv, headSkip: 1, colNum: 20, delimiter: ",", precision: 2}
+
+series:
+  - name: streamflow.csv
+    variables:
+      - name: Streamflow
+        headSkip: 1
+        colNum: 2
+
+  - name: Runoff_Yield.csv
+    variables:
+      - name: Runoff
+        headSkip: 1
+        idHeader: true
+
+  - name: ET.csv
+    variables:
+      - name: ET
+        headSkip: 1
+        idHeader: true
+
+  - name: WD.csv
+    variables:
+      - name: WD
+        headSkip: 1
+        idHeader: true
+
+  - name: WL.csv
+    variables:
+      - name: WL
+        headSkip: 1
+        idHeader: true

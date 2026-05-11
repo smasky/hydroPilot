@@ -40,6 +40,10 @@ class Executor:
         X = np.asarray(X)
         if X.ndim == 1:
             X = X.reshape(1, -1)
+        elif X.ndim != 2:
+            raise ValueError(f"Expected X to be a 1D or 2D array, got {X.ndim}D")
+        if X.shape[1] != self.nInput:
+            raise ValueError(f"Expected {self.nInput} input parameters, got {X.shape[1]}")
         n = X.shape[0]
         n_obj = self.services.evaluator.nOutput
         n_con = self.services.evaluator.nConstraints

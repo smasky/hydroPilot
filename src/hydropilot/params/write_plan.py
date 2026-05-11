@@ -48,20 +48,11 @@ class ParamWritePlan:
                 task = self.write_tasks[task_key]
                 handler = task["handler"]
 
-                lib_info_for_file = writer_cls.buildSpec({
-                    "name": lib_info.name,
-                    "type": lib_info.type,
-                    "bounds": lib_info.bounds,
-                    "file": {
-                        "name": rel_file,
-                        "line": lib_info.file.line,
-                        "start": lib_info.file.start,
-                        "width": lib_info.file.width,
-                        "precision": lib_info.file.precision,
-                        "maxNum": lib_info.file.maxNum,
-                        "selectIndex": lib_info.file.selectIndex,
-                    },
-                })
+                raw_item_for_file = dict(raw_item)
+                raw_file_for_file = dict(raw_item_for_file["file"])
+                raw_file_for_file["name"] = rel_file
+                raw_item_for_file["file"] = raw_file_for_file
+                lib_info_for_file = writer_cls.buildSpec(raw_item_for_file)
 
                 if handler.register_param(spec, lib_info_for_file, self.cfg.parameters.hardBound):
                     task["indices"].append(spec.index)

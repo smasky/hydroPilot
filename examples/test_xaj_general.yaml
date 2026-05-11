@@ -1,0 +1,88 @@
+version: general
+basic:
+  projectPath: E:\hydroPilot\xaj
+  workPath: E:\hydroPilot\examples\work
+  command: ./pyxaj.exe run xaj.yaml
+  timeout: -1
+  parallel: 1
+  keepInstances: false
+functions:
+  - name: NSE
+    kind: builtin
+    args: []
+parameters:
+  design:
+    - index: 0
+      name: KC
+      type: float
+      bounds: [0.5, 2.0]
+    - index: 1
+      name: WM
+      type: float
+      bounds: [80.0, 200.0]
+  physical:
+    - index: 0
+      name: KC
+      type: float
+      mode: v
+      bounds: [0.5, 2.0]
+      writerType: csv
+      file:
+        name: parameters.csv
+        rowList: [2]
+        colNum: 4
+        delimiter: ','
+        precision: 3
+    - index: 1
+      name: WM
+      type: float
+      mode: v
+      bounds: [80.0, 200.0]
+      writerType: csv
+      file:
+        name: parameters.csv
+        rowList: [2]
+        colNum: 8
+        delimiter: ','
+        precision: 3
+  hardBound: true
+  transformer: null
+series:
+  - id: flow
+    desc: XAJ outlet streamflow
+    sim:
+      readerType: csv
+      file: streamflow.csv
+      rowRanges:
+        - [2, 1001]
+      colNum: 2
+    obs:
+      readerType: csv
+      file: ../xaj/streamflow.csv
+      rowRanges:
+        - [2, 1001]
+      colNum: 2
+  - id: runoff
+    desc: XAJ runoff yield for RIVID 60711600
+    sim:
+      readerType: csv
+      file: Runoff_Yield.csv
+      rowRanges:
+        - [2, 1001]
+      colNum: 2
+derived:
+  - id: nse_flow
+    desc: nse_flow
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+objectives:
+  - id: obj_nse
+    ref: nse_flow
+    desc: Maximize NSE
+    sense: max
+    on_error: -.inf
+reporter:
+  flushInterval: 50
+  holdingPenLimit: 20
+  series: []

@@ -3,10 +3,11 @@
 Converts simplified user config (design/physical/transformer)
 into design + physical parameter lists for downstream consumption.
 """
-import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+
+from ..common.params import build_design_items, resolve_physical_params
 
 
 # ---------------------------------------------------------------------------
@@ -19,9 +20,6 @@ class HruMatch:
     subbasinId: int
     hruId: int
     files: Dict[str, str]  # {"hru": "000010001.hru", "mgt": "000010001.mgt", ...}
-
-
-DEFAULT_MODE = "v"
 
 
 # ---------------------------------------------------------------------------
@@ -140,112 +138,6 @@ def resolveFileTargets(hruMatches: List[HruMatch], filePattern: str) -> List[str
 
 
 # ---------------------------------------------------------------------------
-# 3.4 + 3.5  Design → Physical resolve & name matching
-# ---------------------------------------------------------------------------
-
-def _autoPhysical(designItem: Dict[str, Any], paramDb: Dict[str, Any]) -> Dict[str, Any]:
-    """Auto-generate a physical param entry from a design item + SWAT parameter database."""
-    name = designItem["name"]
-    dbEntry = paramDb.get(name)
-    if not dbEntry:
-        raise ValueError(
-            f"Unknown parameter '{name}': not found in the SWAT parameter database and no "
-            f"inline location provided. Either add it to swat_db.yaml parameters or "
-            f"provide a physical entry with an explicit location."
-        )
-    return {
-        "name": name,
-        "type": designItem.get("type", dbEntry["type"]),
-        "mode": DEFAULT_MODE,
-        "bounds": designItem.get("bounds", dbEntry["bounds"]),
-        "filter": None,
-        "location": copy.deepcopy(dbEntry["file"]),
-    }
-
-
-def _mergePhysical(
-    designItem: Optional[Dict[str, Any]],
-    physItem: Dict[str, Any],
-    paramDb: Dict[str, Any],
-) -> Dict[str, Any]:
-    """Merge a physical entry with SWAT parameter database defaults, optionally paired with design."""
-    name = physItem["name"]
-    dbEntry = paramDb.get(name)
-
-    # Location priority: inline > SWAT parameter database > error
-    location = physItem.get("location")
-    if not location:
-        if dbEntry:
-            location = copy.deepcopy(dbEntry["file"])
-        else:
-            raise ValueError(
-                f"Parameter '{name}' has no inline location and is not in the "
-                f"SWAT parameter database. Provide a location in the physical entry."
-            )
-
-    # Type priority: physical explicit > SWAT parameter database > default "float"
-    paramType = physItem.get("type")
-    if not paramType:
-        paramType = dbEntry["type"] if dbEntry else "float"
-
-    # Bounds: design explicit > SWAT parameter database > None
-    if designItem and "bounds" in designItem:
-        bounds = designItem["bounds"]
-    elif dbEntry:
-        bounds = dbEntry["bounds"]
-    else:
-        bounds = None
-
-    return {
-        "name": name,
-        "type": paramType,
-        "mode": physItem.get("mode", DEFAULT_MODE),
-        "bounds": bounds,
-        "filter": physItem.get("filter"),
-        "location": location,
-    }
-
-
-def resolvePhysicalParams(
-    design: List[Dict[str, Any]],
-    physical: Optional[List[Dict[str, Any]]],
-    transformer: Optional[str],
-    paramDb: Dict[str, Any],
-) -> List[Dict[str, Any]]:
-    """Resolve the full physical param list from user config.
-
-    Three scenarios:
-    A) design only → auto-generate physical from SWAT parameter database
-    B) design + physical (no transformer) → match by name
-    C) design + physical + transformer → physical list order, no name matching
-    """
-    if physical is None:
-        # Scenario A
-        return [_autoPhysical(d, paramDb) for d in design]
-
-    if transformer is None:
-        # Scenario B: match by name
-        # Build a map; note physical can have duplicate names (rare without transformer)
-        physByName: Dict[str, List[Dict[str, Any]]] = {}
-        for p in physical:
-            physByName.setdefault(p["name"], []).append(p)
-
-        result = []
-        for d in design:
-            pList = physByName.get(d["name"])
-            if not pList:
-                # Design param not in physical → auto-generate
-                result.append(_autoPhysical(d, paramDb))
-            else:
-                for p in pList:
-                    result.append(_mergePhysical(d, p, paramDb))
-        return result
-
-    # Scenario C: transformer mode — physical list order
-    return [_mergePhysical(None, p, paramDb) for p in physical]
-
-
-# ---------------------------------------------------------------------------
 # 3.3  Location expansion
 # ---------------------------------------------------------------------------
 
@@ -325,26 +217,13 @@ def buildSwatParams(
     transformer = rawParams.get("transformer")
 
     # Step 1: Resolve physical params (fill defaults from SWAT parameter database)
-    resolvedPhysical = resolvePhysicalParams(design, physical, transformer, paramDb)
+    resolvedPhysical = resolve_physical_params(design, physical, transformer, paramDb, modelName="SWAT")
 
     # Step 2: Expand locations (physical × matched files → physical entries)
     physicalItems = expandLocations(resolvedPhysical, meta, writerType)
 
     # Step 3: Build design items from the original design list
-    designItems = []
-    for d in design:
-        item = {"name": d["name"], "type": d.get("type", "float")}
-        if "bounds" in d:
-            item["bounds"] = d["bounds"]
-        else:
-            dbEntry = paramDb.get(d["name"])
-            if dbEntry:
-                item["bounds"] = dbEntry["bounds"]
-            else:
-                raise ValueError(f"Parameter '{d['name']}' has no bounds")
-        if d.get("sets"):
-            item["sets"] = d["sets"]
-        designItems.append(item)
+    designItems = build_design_items(design, paramDb, modelName="SWAT")
 
     result = {
         "design": designItems,

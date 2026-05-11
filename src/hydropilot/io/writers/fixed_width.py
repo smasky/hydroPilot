@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from ..value_ops import apply_param_mode, clamp_value
+from ..rows import build_row_selection
 from .base import ParamWriter
 
 
@@ -61,21 +63,6 @@ class Modification:
     data: bytes
 
 
-def _expand_row_ranges(row_ranges: List[List[int]]) -> List[int]:
-    out: List[int] = []
-    for rr in row_ranges:
-        if len(rr) == 2:
-            a, b = rr
-            step = 1
-        elif len(rr) == 3:
-            a, b, step = rr
-        else:
-            raise ValueError(f"Invalid row range: {rr}")
-        out.extend(range(int(a), int(b) + 1, int(step)))
-    out.sort()
-    return out
-
-
 class FixedWidthWriter(ParamWriter):
     @classmethod
     def validateSpec(cls, raw_spec: Dict[str, Any]) -> None:
@@ -98,7 +85,11 @@ class FixedWidthWriter(ParamWriter):
         if raw_line is None:
             raise ValueError("missing fixed_width field 'line'")
         if isinstance(raw_line, list) and raw_line and isinstance(raw_line[0], list):
-            parsed_line = _expand_row_ranges(raw_line)
+            parsed_line = build_row_selection(
+                {"rowRanges": raw_line},
+                missing_message="missing fixed_width field 'line'",
+                positive_message="fixed_width line must use positive 1-based row numbers",
+            )
         else:
             parsed_line = raw_line
         start = file_spec.get("start")
@@ -312,29 +303,15 @@ class FixedWidthWriter(ParamWriter):
                 continue
 
             for entry_index, e in enumerate(p.entries, start=1):
-                if p.mode == 0:
-                    raw = e.original_val * (1.0 + float(input_val))
-                elif p.mode == 1:
-                    raw = float(input_val)
-                elif p.mode == 2:
-                    raw = e.original_val + float(input_val)
-                else:
-                    raw = float(input_val)
+                raw_value = apply_param_mode(e.original_val, input_val, mode=p.mode, typ=p.typ)
+                clamped, was_clamped = clamp_value(raw_value, lb=p.lb, ub=p.ub)
 
-                raw2 = int(raw) if p.typ == 1 else raw
-
-                clamped = raw2
-                if p.lb is not None and clamped < p.lb:
-                    clamped = p.lb
-                if p.ub is not None and clamped > p.ub:
-                    clamped = p.ub
-
-                if clamped != raw2:
+                if was_clamped:
                     clamp_events.append({
                         "file": Path(output_filepath).name,
                         "param": p.name,
                         "idx": idx,
-                        "raw": raw2,
+                        "raw": raw_value,
                         "clamped": clamped,
                         "lb": p.lb,
                         "ub": p.ub,

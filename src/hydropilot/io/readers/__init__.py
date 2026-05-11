@@ -1,5 +1,6 @@
 from .base import SeriesReader
 from .text import TextReader, read_text_extract, parse_fixed_width, parse_col_list
+from .csv import CsvReader
 
 READER_REGISTRY: dict[str, type[SeriesReader]] = {}
 
@@ -16,3 +17,4 @@ def getReader(readerType: str) -> type[SeriesReader]:
 
 
 registerReader("text", TextReader)
+registerReader("csv", CsvReader)

@@ -7,6 +7,7 @@ from hydropilot.config.paths import resolve_config_path
 from hydropilot.config.specs import RunConfig
 from hydropilot.io.writers import getWriter
 from hydropilot.io.readers import getReader
+from hydropilot.config.schema.series import ReaderSpec
 from hydropilot.validation.diagnostics import Diagnostic, error, has_error, warning
 
 
@@ -167,8 +168,11 @@ def _validate_general_series(raw: dict[str, Any], base_path: Path) -> list[Diagn
         series_path = f"series[{series_id}]"
         if "id" not in series:
             diagnostics.append(error(series_path, "missing series id"))
+        if "size" in series:
+            diagnostics.append(error(f"{series_path}.size", "series.size is not supported; size is derived automatically"))
         diagnostics.extend(_validate_extract_node(series.get("sim"), f"{series_path}.sim", is_obs=False, base_path=base_path))
         diagnostics.extend(_validate_extract_node(series.get("obs"), f"{series_path}.obs", is_obs=True, base_path=base_path))
+        diagnostics.extend(_validate_series_size_match(series, series_path, base_path))
     return diagnostics
 
 
@@ -211,6 +215,9 @@ def _validate_reader_node(node: dict[str, Any], path: str, *, is_obs: bool, base
     if not readerType:
         diagnostics.append(error(path, "missing readerType"))
         return diagnostics
+    if "size" in node:
+        diagnostics.append(error(f"{path}.size", "reader size is not supported; size is derived automatically"))
+        return diagnostics
 
     try:
         readerCls = getReader(str(readerType))
@@ -219,6 +226,34 @@ def _validate_reader_node(node: dict[str, Any], path: str, *, is_obs: bool, base
         message, suggestion = _split_suggestion(str(exc))
         diagnostics.append(error(path, message, suggestion))
     return diagnostics
+
+
+def _validate_series_size_match(series: dict[str, Any], series_path: str, base_path: Path) -> list[Diagnostic]:
+    sim = series.get("sim")
+    obs = series.get("obs")
+    if not isinstance(sim, dict) or not isinstance(obs, dict):
+        return []
+    if "call" in sim or "call" in obs:
+        return []
+    if "readerType" not in sim or "readerType" not in obs:
+        return []
+
+    try:
+        sim_spec = ReaderSpec.from_raw(sim, base_path, f"{series_path}.sim", check_file=False)
+        obs_spec = ReaderSpec.from_raw(obs, base_path, f"{series_path}.obs", check_file=True)
+    except ValueError:
+        return []
+
+    sim_size = getattr(sim_spec.spec, "size", None)
+    obs_size = getattr(obs_spec.spec, "size", None)
+    if sim_size == obs_size:
+        return []
+
+    return [warning(
+        series_path,
+        f"sim size {sim_size} does not match obs size {obs_size}",
+        "confirm sim/obs row selection resolves to the same series length",
+    )]
 
 
 def _validate_general_functions(raw: dict[str, Any], base_path: Path) -> list[Diagnostic]:

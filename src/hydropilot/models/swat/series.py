@@ -75,7 +75,6 @@ def _resolveSwatExtract(
 
     objectId = sim.pop("id", None)
     period = sim.pop("period", None)
-    timestep = sim.pop("timestep", None)
     if "subbasin" in sim or "hru" in sim:
         seriesId = series.get("id", "<unknown>")
         raise ValueError(f"Series '{seriesId}' uses deprecated subbasin/hru fields; use sim.id instead")
@@ -87,10 +86,8 @@ def _resolveSwatExtract(
         outputType=outputType,
         id=objectId,
         period=period,
-        timestep=timestep,
     )
     sim["rowRanges"] = result["rowRanges"]
-    series["size"] = result["size"]
 
 
 def inferSwatOutputType(fileName: str) -> str | None:

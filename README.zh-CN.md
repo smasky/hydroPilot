@@ -6,7 +6,7 @@
 
 HydroPilot 希望把水文建模周边那些重复的胶水代码收敛成一条可复用工作流：参数映射、输入写入、模型执行、结果提取、目标计算与运行记录。
 
-它的核心是模型无关的。就当前仓库而言，SWAT 是第一个内置模板，也是目前最成熟的集成。
+它的核心是模型无关的。就当前仓库而言, SWAT 是第一个内置模板，也是目前最成熟的集成。
 
 ## HydroPilot 是什么
 
@@ -31,6 +31,7 @@ HydroPilot 是：
 - UQPyL 集成
 - `hydropilot-validate` CLI
 - `hydropilot-test` CLI，用于执行单次配置测试
+- `hydropilot-run` CLI，用于按给定参数执行单次正式运行
 
 目前应视为规划中、而不是已内置支持的内容：
 
@@ -115,6 +116,28 @@ hydropilot-test path/to/config.yaml
 测试命令会使用一组确定性的参数向量跑完整运行时流程，
 强制 `parallel = 1`，保留运行时项目副本，并在本次运行的
 `archive` 目录下写出 `test-report.md`。
+
+### 按给定参数执行单次运行
+
+先准备一个 `run.yaml`：
+
+```yaml
+config: examples/test_monthly.yaml
+mode: design
+values:
+  CN2: 50
+  ALPHA_BF: 0.5
+  GW_DELAY: 100
+```
+
+然后执行：
+
+```bash
+hydropilot-run run.yaml
+```
+
+这个命令会走完整运行时链路，但不会生成 `test-report.md`。
+如果只想写入参数副本、不执行模型，继续使用 `hydropilot-apply`。
 
 ### 使用 `SimModel` 评估参数向量
 

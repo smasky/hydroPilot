@@ -11,6 +11,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from hydropilot.config.loader import load_config
+from hydropilot import SimModel
 from hydropilot.testing.runner import run_config_test
 from hydropilot.testing.vector import build_default_test_vector
 
@@ -86,7 +87,6 @@ def _write_config(tmp_path: Path, command: list[str]) -> Path:
             "id": "flow",
             "sim": {"file": "output.txt", "readerType": "text", "rowRanges": [[1, 3]], "colNum": 1},
             "obs": {"file": str(obs), "readerType": "text", "rowRanges": [[1, 2]], "colNum": 1},
-            "size": 3,
         }],
         "functions": [],
         "derived": [],
@@ -240,6 +240,68 @@ def test_hydropilot_test_cli_prints_summary_and_report_path(tmp_path: Path):
     assert "test-report.md" in proc.stdout
 
 
+def test_hydropilot_run_cli_reads_run_yaml_and_prints_summary(tmp_path: Path):
+    config_path = _write_config(tmp_path, [sys.executable, "write_output.py"])
+    run_spec = {
+        "config": str(config_path),
+        "mode": "design",
+        "values": {
+            "x_float": 5.5,
+            "x_int": 4,
+            "x_disc": 9,
+            "x_multi": 7.25,
+        },
+    }
+    run_path = tmp_path / "run.yaml"
+    run_path.write_text(yaml.safe_dump(run_spec, sort_keys=False), encoding="utf-8")
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "hydropilot.cli.run", str(run_path)],
+        cwd=SRC,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0
+    assert "HydroPilot run PASSED" in proc.stdout
+    assert "Inputs:" in proc.stdout
+    assert "X:" in proc.stdout
+    assert "P:" in proc.stdout
+    assert "instance_0" in proc.stdout
+    assert "test-report.md" not in proc.stdout
+
+
+def test_hydropilot_run_cli_supports_physical_mode(tmp_path: Path):
+    config_path = _write_config(tmp_path, [sys.executable, "write_output.py"])
+    run_spec = {
+        "config": str(config_path),
+        "mode": "physical",
+        "values": {
+            "p_float": 1.25,
+            "p_int": 3,
+            "p_disc": 7,
+            "p_multi": 8.5,
+        },
+    }
+    run_path = tmp_path / "run_physical.yaml"
+    run_path.write_text(yaml.safe_dump(run_spec, sort_keys=False), encoding="utf-8")
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "hydropilot.cli.run", str(run_path)],
+        cwd=SRC,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0
+    assert "HydroPilot run PASSED" in proc.stdout
+    assert "P:" in proc.stdout
+    assert "1.25" in proc.stdout
+    assert "8.5" in proc.stdout
+
+
 def test_run_config_test_failure_report_keeps_inputs_and_project_copy(tmp_path: Path):
     config_path = _write_config(tmp_path, [sys.executable, "-c", "import sys; print('bad model'); sys.exit(3)"])
 
@@ -253,3 +315,92 @@ def test_run_config_test_failure_report_keeps_inputs_and_project_copy(tmp_path: 
     assert "| x_float | 5.0 |" in report
     assert "| p_float | 5.0 |" in report
     assert "NONZERO_EXIT" in report
+
+
+def test_sim_model_apply_design_copies_project_and_writes_transformed_values(tmp_path: Path):
+    config_path = _write_config(tmp_path, [sys.executable, "write_output.py"])
+    model = SimModel(str(config_path))
+
+    out_dir = tmp_path / "applied_design"
+    try:
+        result = model.apply_design([5.5, 4, 9, 7.25], out_dir)
+    finally:
+        model.close()
+
+    assert result == out_dir
+    assert out_dir.exists()
+    assert (out_dir / "write_output.py").exists()
+    assert (out_dir / "params.txt").read_text(encoding="ascii").splitlines() == [
+        "  5.50     4     9",
+        "  7.25  7.25  7.25",
+    ]
+
+
+def test_sim_model_apply_params_writes_physical_values_directly(tmp_path: Path):
+    config_path = _write_config(tmp_path, [sys.executable, "write_output.py"])
+    model = SimModel(str(config_path))
+
+    out_dir = tmp_path / "applied_params"
+    try:
+        result = model.apply_params([1.25, 3, 7, 8.5], out_dir)
+    finally:
+        model.close()
+
+    assert result == out_dir
+    assert (out_dir / "params.txt").read_text(encoding="ascii").splitlines() == [
+        "  1.25     3     7",
+        "  8.50  8.50  8.50",
+    ]
+
+
+def test_sim_model_apply_rejects_existing_output_directory(tmp_path: Path):
+    config_path = _write_config(tmp_path, [sys.executable, "write_output.py"])
+    model = SimModel(str(config_path))
+
+    out_dir = tmp_path / "existing_target"
+    out_dir.mkdir()
+    try:
+        with pytest.raises(FileExistsError, match="apply target already exists"):
+            model.apply_design([5.0, 2, 7, 5.0], out_dir)
+    finally:
+        model.close()
+
+
+def test_sim_model_apply_design_accepts_named_yaml_style_mapping(tmp_path: Path):
+    config_path = _write_config(tmp_path, [sys.executable, "write_output.py"])
+    model = SimModel(str(config_path))
+
+    out_dir = tmp_path / "applied_named_design"
+    try:
+        result = model.apply_design(
+            {"x_float": 5.5, "x_int": 4, "x_disc": 9, "x_multi": 7.25},
+            out_dir,
+        )
+    finally:
+        model.close()
+
+    assert result == out_dir
+    assert (out_dir / "params.txt").read_text(encoding="ascii").splitlines() == [
+        "  5.50     4     9",
+        "  7.25  7.25  7.25",
+    ]
+
+
+def test_sim_model_apply_params_accepts_named_yaml_style_mapping(tmp_path: Path):
+    config_path = _write_config(tmp_path, [sys.executable, "write_output.py"])
+    model = SimModel(str(config_path))
+
+    out_dir = tmp_path / "applied_named_params"
+    try:
+        result = model.apply_params(
+            {"p_float": 1.25, "p_int": 3, "p_disc": 7, "p_multi": 8.5},
+            out_dir,
+        )
+    finally:
+        model.close()
+
+    assert result == out_dir
+    assert (out_dir / "params.txt").read_text(encoding="ascii").splitlines() == [
+        "  1.25     3     7",
+        "  8.50  8.50  8.50",
+    ]

@@ -91,6 +91,20 @@ def _parsePeriod(
     return [_parseSinglePeriod(period)]
 
 
+def normalize_period_window(
+    period: Optional[Union[List, None]],
+    meta: Dict[str, Any],
+) -> Tuple[date, date, date, date]:
+    segments = _parsePeriod(period, meta)
+    requested_start = min(seg_start for seg_start, _ in segments)
+    requested_end = max(seg_end for _, seg_end in segments)
+    output_start = date(meta["output_start_year"], 1, 1)
+    output_end = date(meta["output_end_year"], 12, 31)
+    clipped_start = max(requested_start, output_start)
+    clipped_end = min(requested_end, output_end)
+    return requested_start, requested_end, clipped_start, clipped_end
+
+
 def _resolveHruIndex(
     meta: Dict[str, Any],
     subbasin: int,

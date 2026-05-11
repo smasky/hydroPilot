@@ -56,7 +56,6 @@ series:
       file: output.rch
       id: 62
       period: [2019, 2021]
-      timestep: monthly
       colSpan: [51, 61]
     obs:
       file: "../../../examples/obs_flow_monthly.txt"
@@ -70,7 +69,6 @@ series:
       file: output.rch
       id: 62
       period: [2019, 2021]
-      timestep: monthly
       colSpan: [544, 553]
     obs:
       file: "../../../examples/obs_tn_monthly.txt"

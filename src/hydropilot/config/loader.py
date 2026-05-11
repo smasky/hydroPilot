@@ -69,6 +69,7 @@ def load_config(path: Union[str, Path]) -> RunConfig:
     ``<workPath>/<original_name>_general.yaml`` for user inspection.
     """
     prepared = prepare_config(path)
+    _print_pre_run_warnings(prepared.diagnostics)
     _dump_resolved_config(
         _config_to_user_dict(prepared.config, prepared.expanded_raw),
         prepared.yaml_file,
@@ -160,6 +161,16 @@ def _translate_run_config_exception(raw: dict[str, Any], exc: ValueError) -> Dia
     return Diagnostic(level="error", path="config", message=message, suggestion=None)
 
 
+def _print_pre_run_warnings(diagnostics: list[Diagnostic]) -> None:
+    for item in diagnostics:
+        if item.level != "warning":
+            continue
+        line = f"WARNING {item.path}: {item.message}"
+        if item.suggestion:
+            line += f" Suggestion: {item.suggestion}"
+        print(line)
+
+
 def _dump_resolved_config(raw: dict, source_file: Path) -> None:
     """Write the resolved general config next to the source YAML file."""
     out_dir = source_file.parent
@@ -220,10 +231,19 @@ def _basic_to_dict(basic) -> dict[str, Any]:
 def _parameters_to_dict(parameters) -> dict[str, Any]:
     return {
         "design": [_model_public_dict(item) for item in parameters.design],
-        "physical": [_model_public_dict(item) for item in parameters.physical],
+        "physical": [_physical_parameter_to_dict(item) for item in parameters.physical],
         "hardBound": parameters.hardBound,
         "transformer": parameters.transformer,
     }
+
+
+def _physical_parameter_to_dict(parameter) -> dict[str, Any]:
+    data = _model_public_dict(parameter)
+    writer_type = data.get("writerType")
+    file_spec = data.get("file")
+    if isinstance(file_spec, dict):
+        data["file"] = _ordered_writer_file_spec(writer_type, file_spec)
+    return data
 
 
 def _series_to_dict(series) -> dict[str, Any]:
@@ -231,7 +251,6 @@ def _series_to_dict(series) -> dict[str, Any]:
         "id": series.id,
         "desc": series.name,
         "sim": _series_endpoint_to_dict(series.sim),
-        "size": series.size,
     }
     if series.obs is not None:
         data["obs"] = _series_endpoint_to_dict(series.obs)
@@ -241,9 +260,57 @@ def _series_to_dict(series) -> dict[str, Any]:
 def _series_endpoint_to_dict(endpoint) -> dict[str, Any]:
     if hasattr(endpoint, "raw"):
         raw = _normalize_plain(endpoint.raw)
-        raw.setdefault("readerType", endpoint.readerType)
-        return raw
+        reader_type = raw.pop("readerType", endpoint.readerType)
+        return _ordered_reader_spec(reader_type, raw)
     return {"call": _model_public_dict(endpoint)}
+
+
+def _ordered_reader_spec(reader_type: str, raw: dict[str, Any]) -> dict[str, Any]:
+    if reader_type == "csv":
+        ordered = {"readerType": reader_type}
+        for key in ["file", "rowRanges", "rowList", "colNum", "delimiter"]:
+            if key in raw:
+                ordered[key] = raw[key]
+        for key, value in raw.items():
+            if key not in ordered:
+                ordered[key] = value
+        return ordered
+
+    if reader_type == "text":
+        ordered = {"readerType": reader_type}
+        for key in ["file", "rowRanges", "rowList", "colSpan", "colNum", "delimiter"]:
+            if key in raw:
+                ordered[key] = raw[key]
+        for key, value in raw.items():
+            if key not in ordered:
+                ordered[key] = value
+        return ordered
+
+    return {"readerType": reader_type, **raw}
+
+
+def _ordered_writer_file_spec(writer_type: str, file_spec: dict[str, Any]) -> dict[str, Any]:
+    if writer_type == "csv":
+        ordered = {}
+        for key in ["name", "rowRanges", "rowList", "colNum", "delimiter", "precision", "selectIndex"]:
+            if key in file_spec:
+                ordered[key] = file_spec[key]
+        for key, value in file_spec.items():
+            if key not in ordered:
+                ordered[key] = value
+        return ordered
+
+    if writer_type == "fixed_width":
+        ordered = {}
+        for key in ["name", "line", "start", "width", "precision", "maxNum", "selectIndex"]:
+            if key in file_spec:
+                ordered[key] = file_spec[key]
+        for key, value in file_spec.items():
+            if key not in ordered:
+                ordered[key] = value
+        return ordered
+
+    return file_spec
 
 
 def _function_to_dict(function) -> dict[str, Any]:

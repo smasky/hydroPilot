@@ -45,7 +45,6 @@ class SeriesSpec(ConfigNode):
     name: str
     sim: Union[ReaderSpec, CallSpec]
     obs: Optional[ReaderSpec] = None
-    size: int = -1
 
     @classmethod
     def from_raw(cls, raw: Dict[str, Any], base_path: Path) -> "SeriesSpec":
@@ -86,7 +85,6 @@ class SeriesSpec(ConfigNode):
             "name": str(raw.get("desc", sid)),
             "sim": sim,
             "obs": obs,
-            "size": int(raw.get("size", -1)),
         }
         return cls.model_validate(payload)
 

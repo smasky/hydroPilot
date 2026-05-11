@@ -36,6 +36,8 @@ Issues = "https://github.com/smasky/hydroPilot/issues"
 [project.scripts]
 hydropilot-validate = "hydropilot.cli.validate:main"
 hydropilot-test = "hydropilot.cli.test:main"
+hydropilot-apply = "hydropilot.cli.apply:main"
+hydropilot-run = "hydropilot.cli.run:main"
 
 [project.optional-dependencies]
 uqpyl = ["UQPyL"]

@@ -323,6 +323,182 @@ def test_validate_general_config_warns_parameter_count_mismatch_with_transformer
     assert "transformer must return 2 physical parameter values" in diagnostics[0].message
 
 
+def test_validate_general_config_warns_series_size_mismatch(tmp_path: Path):
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": ".",
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [{"name": "x1", "bounds": [0, 1]}],
+            "physical": [{
+                "name": "x1",
+                "type": "float",
+                "bounds": [0, 1],
+                "writerType": "fixed_width",
+                "file": {
+                    "name": "params.txt",
+                    "line": 1,
+                    "start": 1,
+                    "width": 10,
+                    "precision": 2,
+                },
+            }],
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {
+                "file": "output.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+            "obs": {
+                "file": "obs.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 2]],
+                "colSpan": [1, 10],
+            },
+        }],
+        "functions": [],
+        "derived": [],
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
+        "reporter": {},
+    }
+
+    (tmp_path / "obs.txt").write_text("1\n2\n", encoding="utf-8")
+    config_path = tmp_path / "series_size_mismatch.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    diagnostics = validate_config(config_path)
+
+    assert len(diagnostics) == 1
+    assert diagnostics[0].level == "warning"
+    assert diagnostics[0].path == "series[flow]"
+    assert "sim size 3 does not match obs size 2" in diagnostics[0].message
+
+
+def test_load_config_prints_pre_run_warnings(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": ".",
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [{"name": "x1", "bounds": [0, 1]}],
+            "physical": [{
+                "name": "x1",
+                "type": "float",
+                "bounds": [0, 1],
+                "writerType": "fixed_width",
+                "file": {
+                    "name": "params.txt",
+                    "line": 1,
+                    "start": 1,
+                    "width": 10,
+                    "precision": 2,
+                },
+            }],
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {
+                "file": "output.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+            "obs": {
+                "file": "obs.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 2]],
+                "colSpan": [1, 10],
+            },
+        }],
+        "functions": [],
+        "derived": [],
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
+        "reporter": {},
+    }
+
+    (tmp_path / "obs.txt").write_text("1\n2\n", encoding="utf-8")
+    config_path = tmp_path / "load_warning.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    load_config(config_path)
+    out = capsys.readouterr().out
+
+    assert "WARNING series[flow]: sim size 3 does not match obs size 2" in out
+
+
+def test_validate_general_config_rejects_manual_series_size(tmp_path: Path):
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": ".",
+            "workPath": "./work",
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [{"name": "x1", "bounds": [0, 1]}],
+            "physical": [{
+                "name": "x1",
+                "type": "float",
+                "bounds": [0, 1],
+                "writerType": "fixed_width",
+                "file": {
+                    "name": "params.txt",
+                    "line": 1,
+                    "start": 1,
+                    "width": 10,
+                    "precision": 2,
+                },
+            }],
+        },
+        "series": [{
+            "id": "flow",
+            "size": 3,
+            "sim": {
+                "file": "output.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+            "obs": {
+                "file": "obs.txt",
+                "readerType": "text",
+                "rowRanges": [[1, 3]],
+                "colSpan": [1, 10],
+            },
+        }],
+        "functions": [],
+        "derived": [],
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
+        "reporter": {},
+    }
+
+    (tmp_path / "obs.txt").write_text("1\n2\n3\n", encoding="utf-8")
+    config_path = tmp_path / "manual_series_size.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    diagnostics = validate_config(config_path)
+
+    assert len(diagnostics) == 1
+    assert diagnostics[0].level == "error"
+    assert diagnostics[0].path == "series[flow].size"
+    assert diagnostics[0].message == "series.size is not supported; size is derived automatically"
+
+
 def test_validate_general_config_reports_missing_obs_column_with_series_id(tmp_path: Path):
     config = {
         "version": "general",
@@ -1129,7 +1305,7 @@ def test_validate_swat_config_reports_ambiguous_parameter_name(tmp_path: Path):
         "series": [],
     }
 
-    diagnostics = validate_swat_config(config, tmp_path)
+    diagnostics = validate_swat_config(config, tmp_path, meta_override={"timestep": "monthly", "output_start_year": 2019, "output_end_year": 2021, "n_subbasins": 1, "subbasins": {}})
 
     assert diagnostics
     assert diagnostics[0].path == "parameters.design[ESCO]"
@@ -1157,7 +1333,7 @@ def test_validate_swat_config_reports_ambiguous_parameter_alias_library(tmp_path
         "series": [],
     }
 
-    diagnostics = validate_swat_config(config, tmp_path)
+    diagnostics = validate_swat_config(config, tmp_path, meta_override={"timestep": "monthly", "output_start_year": 2019, "output_end_year": 2021, "n_subbasins": 1, "subbasins": {}})
     by_path = {item.path: item for item in diagnostics}
 
     for name, candidates in AMBIGUOUS_SWAT_PARAMETER_ALIASES.items():
@@ -1181,6 +1357,104 @@ def test_validate_cli_reports_yaml_root_error(tmp_path: Path):
 
     assert result.returncode == 1
     assert "YAML root must be a mapping/object" in result.stdout
+
+
+def test_hydropilot_apply_cli_reads_apply_yaml_and_writes_project(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "params.txt").write_text("  0.00  0.00  0.00\n  1.00  2.00  3.00\n", encoding="ascii")
+    obs = tmp_path / "obs.txt"
+    obs.write_text("1.0\n2.0\n", encoding="ascii")
+
+    config = {
+        "version": "general",
+        "basic": {
+            "projectPath": str(project),
+            "workPath": str(tmp_path / "work"),
+            "command": "swat.exe",
+        },
+        "parameters": {
+            "design": [
+                {"name": "x_float", "type": "float", "bounds": [0, 10]},
+                {"name": "x_int", "type": "int", "bounds": [1, 4]},
+                {"name": "x_disc", "type": "discrete", "bounds": [7, 9], "sets": [7, 9]},
+                {"name": "x_multi", "type": "float", "bounds": [0, 10]},
+            ],
+            "physical": [
+                {
+                    "name": "p_float",
+                    "type": "float",
+                    "bounds": [0, 10],
+                    "writerType": "fixed_width",
+                    "file": {"name": "params.txt", "line": 1, "start": 1, "width": 6, "precision": 2},
+                },
+                {
+                    "name": "p_int",
+                    "type": "int",
+                    "bounds": [1, 4],
+                    "writerType": "fixed_width",
+                    "file": {"name": "params.txt", "line": 1, "start": 7, "width": 6, "precision": 0},
+                },
+                {
+                    "name": "p_disc",
+                    "type": "discrete",
+                    "bounds": [7, 9],
+                    "sets": [7, 9],
+                    "writerType": "fixed_width",
+                    "file": {"name": "params.txt", "line": 1, "start": 13, "width": 6, "precision": 0},
+                },
+                {
+                    "name": "p_multi",
+                    "type": "float",
+                    "bounds": [0, 10],
+                    "writerType": "fixed_width",
+                    "file": {"name": "params.txt", "line": 2, "start": 1, "width": 6, "precision": 2, "maxNum": 3},
+                },
+            ],
+        },
+        "series": [{
+            "id": "flow",
+            "sim": {"file": "output.txt", "readerType": "text", "rowRanges": [[1, 3]], "colNum": 1},
+            "obs": {"file": str(obs), "readerType": "text", "rowRanges": [[1, 2]], "colNum": 1},
+        }],
+        "functions": [],
+        "derived": [],
+        "objectives": [],
+        "constraints": [],
+        "diagnostics": [],
+        "reporter": {},
+    }
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    apply_spec = {
+        "config": str(config_path),
+        "mode": "design",
+        "outDir": str(tmp_path / "best_project"),
+        "values": {
+            "x_float": 5.5,
+            "x_int": 4,
+            "x_disc": 9,
+            "x_multi": 7.25,
+        },
+    }
+    apply_path = tmp_path / "apply.yaml"
+    apply_path.write_text(yaml.safe_dump(apply_spec, sort_keys=False), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "-m", "hydropilot.cli.apply", str(apply_path)],
+        cwd=SRC,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "Applied design parameters to" in result.stdout
+    assert (tmp_path / "best_project" / "params.txt").read_text(encoding="ascii").splitlines() == [
+        "  5.50     4     9",
+        "  7.25  7.25  7.25",
+    ]
 
 
 def test_validate_cli_prints_success_message(tmp_path: Path):

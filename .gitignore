@@ -4,10 +4,13 @@ __pycache__/
 .pytest_tmp_build/
 .pytest_work/
 .venv/
+.codex
 venv/
 build/
 dist/
 *.egg-info/
 work/
 .history/
+.mindfs
 .claude/settings.local.json
+qi

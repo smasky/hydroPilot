@@ -1,0 +1,64 @@
+# XAJ CSV Test — single basin case
+#
+# XAJ model inputs are declared by xaj.yaml in the project directory.
+# The model command is run inside each runtime project copy.
+# Test project: ../xaj
+
+version: "xaj"
+
+basic:
+  projectPath: "../xaj"
+  workPath: "./work"
+  command: "./pyxaj.exe run xaj.yaml"
+
+parameters:
+  design:
+    - name: KC
+      bounds: [0.5, 2.0]
+    - name: WM
+      bounds: [80, 200]
+
+  physical:
+    - name: KC
+      mode: v
+      filter:
+        rivid: 60711600
+    - name: WM
+      mode: v
+
+series:
+  - id: flow
+    desc: "XAJ outlet streamflow"
+    sim:
+      variable: Streamflow
+      rowRanges:
+        - [1, 1000]
+    obs:
+      file: "../xaj/streamflow.csv"
+      rowRanges:
+        - [2, 1001]
+      colNum: 2
+
+  - id: runoff
+    desc: "XAJ runoff yield for RIVID 60711600"
+    sim:
+      variable: Runoff
+      rivid: 60711600
+      rowRanges:
+        - [1, 1000]
+
+functions:
+  - name: NSE
+    kind: builtin
+
+derived:
+  - id: nse_flow
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+
+objectives:
+  - id: obj_nse
+    desc: "Maximize NSE"
+    ref: nse_flow
+    sense: max

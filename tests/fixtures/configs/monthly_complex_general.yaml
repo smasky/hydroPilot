@@ -587,37 +587,35 @@ series:
   - id: flow
     desc: Monthly streamflow at outlet
     sim:
-      file: output.rch
-      colSpan: [51, 61]
       readerType: text
+      file: output.rch
       rowRanges:
         - [71, 753, 62]
         - [877, 1559, 62]
         - [1683, 2365, 62]
-    size: 36
+      colSpan: [51, 61]
     obs:
+      readerType: text
       file: ../../../examples/obs_flow_monthly.txt
       rowRanges:
         - [1, 36]
       colSpan: [1, 12]
-      readerType: text
   - id: tn
     desc: Monthly total nitrogen at outlet
     sim:
-      file: output.rch
-      colSpan: [544, 553]
       readerType: text
+      file: output.rch
       rowRanges:
         - [71, 753, 62]
         - [877, 1559, 62]
         - [1683, 2365, 62]
-    size: 36
+      colSpan: [544, 553]
     obs:
+      readerType: text
       file: ../../../examples/obs_tn_monthly.txt
       rowRanges:
         - [1, 36]
       colSpan: [1, 12]
-      readerType: text
 derived:
   - id: nse_flow
     desc: nse_flow

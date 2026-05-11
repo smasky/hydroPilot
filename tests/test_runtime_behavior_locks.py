@@ -345,6 +345,7 @@ def test_reporting_records_lock_summary_field_order_and_error_entry_semantics():
 
 def test_executor_run_returns_structured_batch_result():
     executor = Executor.__new__(Executor)
+    executor.nInput = 2
     executor.cfg = _ns(
         basic=_ns(parallel=1),
         parameters=_ns(physical=[_ns(name="p1"), _ns(name="p2")]),
@@ -397,6 +398,7 @@ def test_executor_run_returns_structured_batch_result():
 
 def test_executor_run_pads_series_length_mismatch_with_nan_and_warning():
     executor = Executor.__new__(Executor)
+    executor.nInput = 1
     executor.cfg = _ns(
         basic=_ns(parallel=1),
         parameters=_ns(physical=[]),
@@ -432,6 +434,7 @@ def test_executor_run_pads_series_length_mismatch_with_nan_and_warning():
 
 def test_executor_run_keeps_failed_series_row_as_nan():
     executor = Executor.__new__(Executor)
+    executor.nInput = 1
     executor.cfg = _ns(
         basic=_ns(parallel=1),
         parameters=_ns(physical=[]),
@@ -458,3 +461,19 @@ def test_executor_run_keeps_failed_series_row_as_nan():
 
     assert np.allclose(result.series["flow"][0], np.array([1.0, 2.0, 3.0]))
     assert np.isnan(result.series["flow"][1]).all()
+
+
+def test_executor_run_rejects_wrong_input_width_before_running():
+    executor = Executor.__new__(Executor)
+    executor.nInput = 2
+
+    with pytest.raises(ValueError, match="Expected 2 input parameters, got 3"):
+        Executor.run(executor, np.array([1.0, 2.0, 3.0]))
+
+
+def test_executor_run_rejects_non_vector_or_matrix_input():
+    executor = Executor.__new__(Executor)
+    executor.nInput = 2
+
+    with pytest.raises(ValueError, match="Expected X to be a 1D or 2D array"):
+        Executor.run(executor, np.zeros((1, 2, 1)))

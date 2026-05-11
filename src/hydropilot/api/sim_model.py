@@ -1,3 +1,4 @@
+from .apply import apply_design_params, apply_physical_params
 from ..config.loader import load_config
 from ..runtime.session import Session
 
@@ -58,6 +59,12 @@ class SimModel:
 
     def run(self, X):
         return self.session.run(X)
+
+    def apply_design(self, X, out_dir):
+        return apply_design_params(self.cfg, X, out_dir)
+
+    def apply_params(self, P, out_dir):
+        return apply_physical_params(self.cfg, P, out_dir)
 
     def close(self):
         self.session.close()
