@@ -1,98 +1,61 @@
-[English](./README.md) | [简体中文](./README.zh-CN.md)
+[English](./README.md) | [简体中文](./README.zh-CN.md) | [中文文档](./docs/cn/index.md)
 
 # HydroPilot
 
 > A configuration-first orchestration framework for hydrological model calibration, evaluation, and optimization.
 
-HydroPilot turns the repetitive glue code around hydrological modeling into a reusable workflow: parameter mapping, input writing, model execution, result extraction, objective evaluation, and run reporting.
-
-The core is model-agnostic. In the current repository, SWAT is the first built-in template and the most mature integration.
-
-## What HydroPilot is
-
-HydroPilot is:
-
-- a configuration-driven workflow framework
-- a reusable runtime for repeated model experiments
-- a general schema that is not tied to one model family
-- a template system that can make specific models easier to configure
+HydroPilot turns the repetitive glue code around hydrological modeling into a reusable workflow: parameter mapping, input writing, model execution, result extraction, objective evaluation, and run reporting. The core is model-agnostic. Built-in templates give you shorter, model-specific configuration for supported models.
 
 ## Current status
 
-What is already available in code today:
+What is available today:
 
-- `version: general` workflow mode
-- `version: swat` template mode
-- fixed-width parameter writing
-- text-based series extraction
+- `version: general` — model-agnostic workflow mode
+- `version: swat` — template for SWAT 2012
+- `version: xaj` — template for XAJ (Xinanjiang)
+- readers: `text`, `csv`
+- writers: `fixed_width`, `csv`
 - subprocess-based model execution
 - built-in and external evaluation functions
 - SQLite and CSV run reporting
 - UQPyL integration
-- `hydropilot-validate` CLI
-- `hydropilot-test` CLI for one-run configuration tests
 
-What is planned rather than built-in today:
+CLI entry points:
+
+- `hydropilot-validate` — validate a configuration
+- `hydropilot-test` — run one configuration test
+- `hydropilot-apply` — apply parameters to a project copy
+- `hydropilot-run` — single-run YAML entry point
+
+Public Python API:
+
+- `SimModel` — main runtime entry point
+- `BatchRunResult` — batch evaluation result
+- `UQPyLAdapter` — bridge to UQPyL optimization
+
+Planned, not yet available:
 
 - APEX
 - HBV
 - VIC
 - HEC-HMS
 
-## Why this exists
-
-In hydrological calibration work, the optimizer is often not the painful part. The painful part is the surrounding scripting:
-
-- mapping optimizer variables to physical parameters
-- writing values into multiple model input files
-- launching an external model repeatedly and safely
-- extracting comparable output series
-- computing objectives, constraints, and diagnostics
-- keeping run records for debugging and comparison
-
-HydroPilot packages that repeated work into one reproducible pipeline.
-
-## Two configuration modes
-
-### 1. General mode
-
-Use `version: general` when you want full control over a model-agnostic workflow.
-
-- you define parameter writing explicitly
-- you define series readers explicitly
-- this is the real framework core
-
-### 2. Template mode
-
-Use a template version such as `version: swat` when you want a shorter model-specific config.
-
-- the template expands a compact config into a standard general config
-- runtime execution still happens through the same general pipeline
-- in the current codebase, `swat` is the only built-in template
-
 ## Installation
 
 Requires Python 3.10+.
-
-HydroPilot is available on PyPI:
 
 ```bash
 pip install hydropilot
 ```
 
-For local development from a source checkout, install the package in editable mode:
+For local development:
 
 ```bash
 pip install -e .
-```
-
-Install development dependencies:
-
-```bash
 pip install -e .[dev]
 ```
 
-Install UQPyL integration support:
+With UQPyL integration:
 
 ```bash
 pip install -e .[uqpyl]
@@ -106,17 +69,29 @@ pip install -e .[uqpyl]
 hydropilot-validate path/to/config.yaml
 ```
 
-### Test a configuration with the external model
+### Test a configuration
 
 ```bash
 hydropilot-test path/to/config.yaml
 ```
 
-The test command runs one deterministic parameter vector through the full runtime,
-forces `parallel = 1`, keeps the runtime project copy, and writes
-`test-report.md` under the run archive.
+Runs one deterministic parameter vector through the full runtime, forces `parallel = 1`, keeps the runtime project copy, and writes `test-report.md` under the run archive.
 
-### Evaluate parameter vectors with `SimModel`
+### Apply parameters to a project
+
+```bash
+hydropilot-apply path/to/apply.yaml
+```
+
+### Run from a YAML definition
+
+```bash
+hydropilot-run path/to/run.yaml
+```
+
+Executes one parameter vector described by a run YAML file. It's a single-run entry point — it doesn't manage full experiments.
+
+### Evaluate parameter vectors with SimModel
 
 ```python
 import numpy as np
@@ -135,310 +110,41 @@ with SimModel("examples/test_monthly.yaml") as model:
 
 ```python
 from hydropilot.integrations import UQPyLAdapter
-from UQPyL.optimization import DE
 
-with UQPyLAdapter("examples/test_daily.yaml") as problem:
-    optimizer = DE(problem)
-    optimizer.run()
+with UQPyLAdapter("examples/test_daily.yaml") as adapter:
+    result = adapter.evaluate(X)
+    print(result.objs)
+    print(result.cons)
 ```
-
-## Minimal general-mode example
-
-This example reflects the current general schema more closely than the older simplified drafts:
-
-```yaml
-version: general
-
-basic:
-  projectPath: ./project
-  workPath: ./work
-  command: my_model.exe
-
-parameters:
-  design:
-    - name: K
-      bounds: [0.0, 1.0]
-  physical:
-    - name: K
-      mode: v
-      writerType: fixed_width
-      file:
-        name: model.inp
-        line: 12
-        start: 1
-        width: 10
-        precision: 4
-
-series:
-  - id: flow
-    sim:
-      readerType: text
-      file:
-        name: model.out
-        rowRanges:
-          - [1, 365]
-        colNum: 2
-    obs:
-      readerType: text
-      file:
-        name: obs_flow.txt
-        rowRanges:
-          - [1, 365]
-        colNum: 2
-
-functions:
-  - name: NSE
-    kind: builtin
-
-derived:
-  - id: nse_flow
-    call:
-      func: NSE
-      args: [flow.sim, flow.obs]
-
-objectives:
-  - id: obj_nse
-    ref: nse_flow
-    sense: max
-```
-
-For `writerType: fixed_width`, `file.maxNum` tells the writer how many adjacent
-fixed-width fields to scan from `start`. Add `file.selectIndex` when only one
-scanned entry should be written:
-
-```yaml
-file:
-  name: model.inp
-  line: 12
-  start: 1
-  width: 10
-  precision: 4
-  maxNum: 10
-  selectIndex: 2
-```
-
-If `selectIndex` is omitted, all scanned entries are written. If it is present,
-HydroPilot writes only that 1-based entry; target files where the entry does not
-exist are skipped, and an error is raised if no target file contains it.
-
-## Template example
-
-The repository currently has working SWAT examples such as:
-
-- `examples/test_daily.yaml`
-- `examples/test_monthly.yaml`
-- `examples/test_monthly_complex.yaml`
-- `examples/test_monthly_series.yaml`
-
-A compact SWAT config looks like this:
-
-```yaml
-version: swat
-
-basic:
-  projectPath: E:\BMPs\TxtInOut
-  workPath: ./work
-  command: swat.exe
-
-parameters:
-  design:
-    - name: CN2
-      bounds: [35, 98]
-    - name: ALPHA_BF
-      bounds: [0, 1]
-    - name: GW_DELAY
-      bounds: [0, 500]
-
-series:
-  - id: flow
-    sim:
-      file: output.rch
-      id: 62
-      period: [2019, 2021]
-      timestep: monthly
-      colSpan: [50, 61]
-    obs:
-      file: obs_flow_monthly.txt
-      rowRanges:
-        - [1, 36]
-      colSpan: [1, 12]
-
-functions:
-  - name: NSE
-    kind: builtin
-
-derived:
-  - id: nse_flow
-    call:
-      func: NSE
-      args: [flow.sim, flow.obs]
-
-objectives:
-  - id: obj_nse
-    ref: nse_flow
-    sense: max
-```
-
-## Path semantics
-
-This is important in the current implementation:
-
-- observation files such as `obs.file` are resolved relative to the config file
-- simulation output files such as `sim.file` are resolved relative to the runtime project copy / work instance
-
-So if your model produces `output.rch` inside the run workspace, the config should usually keep it as:
-
-```yaml
-sim:
-  readerType: text
-  file: output.rch
-  rowRanges:
-    - [1, 365]
-  colNum: 1
-```
-
-not as a path relative to the YAML file location.
-
-## Runtime chain
-
-HydroPilot now has two distinct chains that are worth understanding.
-
-### Config and template chain
-
-```text
-YAML config
-  -> config.loader
-  -> template registry (if version != general)
-  -> template expansion to general config
-  -> RunConfig
-```
-
-For example, `version: swat` goes through the SWAT template and becomes a standard `version: general` runtime config.
-
-### Runtime execution chain
-
-```text
-SimModel
-  -> Session
-  -> Workspace
-  -> Executor
-     -> ExecutionServices
-        -> ParamSpace
-        -> ParamWritePlan
-        -> ParamApplier
-        -> SeriesPlan
-        -> ObsStore
-        -> SubprocessRunner
-        -> SeriesExtractor
-        -> Evaluator
-  -> RunReporter
-```
-
-Conceptually, the runtime pipeline is:
-
-```text
-Parameter writing
-  -> Model execution
-  -> Series extraction
-  -> Derived/objective evaluation
-  -> Run reporting
-```
-
-## Repository layout
-
-```text
-src/hydropilot/
-  api/           public API entry points
-  cli/           command-line interfaces
-  config/        config loading, schema, path resolution
-  evaluation/    functions and scalar evaluation
-  integrations/  external optimization adapters
-  io/            readers, writers, runners
-  models/        template registry and model-specific knowledge
-  params/        parameter space and write application
-  reporting/     run persistence and artifacts
-  runtime/       session, workspace, orchestration
-  series/        series planning, obs store, extraction
-  validation/    user-facing config diagnostics
-```
-
-## Built-in functions
-
-The current built-in function set includes:
-
-- `NSE`
-- `KGE`
-- `R2`
-- `RMSE`
-- `MSE`
-- `PBIAS`
-- `LogNSE`
-- `sum_series`
-
-External Python functions are also supported.
-
-## Outputs and run records
-
-Each run creates an isolated runtime workspace plus an archive area. Depending on the config and execution path, outputs can include:
-
-- original config copy
-- resolved general config copy
-- copied observation files when applicable
-- `summary.csv`
-- `results.db`
-- `error.jsonl`
-- `error.log`
-- optional exported series CSV files
-
-## CLI status
-
-Right now, the documented built-in CLI is:
-
-- `hydropilot-validate`
-
-Commands such as `run` and `expand` are still better treated as roadmap items until they are added as real entry points.
 
 ## Support matrix
 
 | Capability | Status |
 |---|---|
-| General configuration mode | Available |
-| Template system | Available |
-| Built-in registered templates | SWAT |
+| General configuration mode (`version: general`) | Available |
+| SWAT 2012 template (`version: swat`) | Available |
+| XAJ template (`version: xaj`) | Available |
 | Fixed-width parameter writing | Available |
+| CSV parameter writing | Available |
 | Text-based series extraction | Available |
+| CSV series extraction | Available |
 | Subprocess runner | Available |
 | SQLite + CSV reporting | Available |
 | UQPyL adapter | Available |
+| `hydropilot-validate` | Available |
+| `hydropilot-test` | Available |
+| `hydropilot-apply` | Available |
+| `hydropilot-run` | Available |
 | APEX template | Planned |
 | HBV template | Planned |
 | VIC template | Planned |
 | HEC-HMS template | Planned |
 
-## Roadmap
+## Documentation
 
-### Near term
+- [Documentation hub](docs/index.md) — index of all documentation
+- [Architecture](docs/architecture.md) — config chain, runtime chain, and module layout
 
-- improve README and onboarding guidance
-- add more complete CLI workflows such as `run` and `expand`
-- strengthen tests and cross-platform behavior
-- improve example coverage
+## License
 
-### Mid term
-
-- formalize extension contracts for templates, readers, writers, and runners
-- add more IO protocols beyond fixed-width text
-- improve experiment metadata and inspection workflows
-
-### Long term
-
-- support more hydrological model templates
-- support more execution backends
-- evolve toward a broader experiment management platform
-
-## Project summary
-
-HydroPilot already has a usable orchestration core and a real SWAT integration. The next step is not reinventing the runtime again, but making the framework easier to understand, easier to extend, and easier to adopt.
-
-
-
+MIT

@@ -1,0 +1,863 @@
+# =============================================================================
+# SWAT+ knowledge database — v1.2 position-corrected expansion
+# =============================================================================
+#
+# This YAML file is the single source of truth for SWAT+ parameter metadata and
+# output-series column layouts. It is loaded by library.py and consumed by:
+#   - builder.py  (paramDb lookup for type / bounds / file location)
+#   - validate.py (design parameter name check against known parameters)
+#   - series.py   (variable → colSpan/colNum resolution)
+#
+# -----------------------------------------------------------------------------
+# Schema — parameter entry
+# -----------------------------------------------------------------------------
+# Each parameter entry requires:
+#   type:   "float" | "int"
+#   bounds: [min, max]          # .inf / -.inf for unbounded
+#   file:
+#     name:      <filename>     # e.g. "parameters.bsn", "hydrology.hyd"
+#     line:      <int>          # 1-based data line (after any header)
+#     start:     <int>          # 1-based column start
+#     width:     <int>          # field width in characters
+#     precision: <int>          # decimal places written (0 for int)
+#     maxNum:    <int>          # 1 for scalar, >1 for multi-row per object
+#
+# -----------------------------------------------------------------------------
+# Schema — series entry
+# -----------------------------------------------------------------------------
+# Each series source requires:
+#   file:         <filename>    # {object}_{report}_{frequency}.txt
+#   object:       basin | hru | hru-lte | lsunit | ru | channel | aquifer | reservoir | hyd
+#   report:       wb | nb | ls | pw | crop_yld | sd
+#   frequency:    aa | yr | mo | da
+#   header_lines: <int>
+#   variables:
+#     - name:   <VARIABLE_NAME>
+#       colSpan: [start, end]   # 1-based inclusive; OR
+#       colNum:  <int>          # single column
+#
+# -----------------------------------------------------------------------------
+# Inclusion guidelines — what belongs in this DB
+# -----------------------------------------------------------------------------
+# INCLUDE:
+#   - Parameters whose fixed-width file position is known and stable across
+#     SWAT+ revisions
+#   - Parameters that need bounds checking (absolute physical ranges)
+#   - Parameters the builder must resolve when a user supplies only a name
+#     (i.e. lookup type + file location from the DB)
+#   - Output files + variables whose column positions are documented
+#
+# EXCLUDE:
+#   - Runtime-computed values (e.g. CN2 adjusted by soil moisture)
+#   - Project-specific counts or configuration (n_hrus, start_year, timestep —
+#     these come from discovery.py, not the DB)
+#   - Management schedule data (ops schedules are too complex for YAML)
+#   - Weather generator parameters (not calibration targets)
+#   - Connectivity table entries (hru.con, rout_unit.con — structural, not
+#     parameterisable)
+#
+# -----------------------------------------------------------------------------
+# Position verification:
+#   All column positions verified against Ames_sub1 Rev 60.5.7 refdata
+#   (parameters.bsn, hydrology.hyd, soils.sol) and Osu_1hru Rev 60.5.4
+#   (hyd-sed-lte.cha).  Field order cross-checked with SWAT+ FORTRAN source
+#   structs in basin_module.f90, channel_module.f90, soil_module.f90.
+#
+#   parameters.bsn:  44 fields × 12-char slots, list-directed read in source
+#   hydrology.hyd:   14 fields × 14-char slots after 23-char name column
+#   hyd-sed-lte.cha: 23 fields, variable-width, line 2 header + line 3+ data
+#   soils.sol:       two-level format — per-soil scalar row + per-layer rows
+#                     (NLY controls layer count; positions are per-layer row)
+# =============================================================================
+
+parameters:
+
+  # ===========================================================================
+  # Group A: parameters.bsn — basin-level parameters (44 fields, single row)
+  #   Format: 44 × 12-char slots, right-justified F12.5 values.
+  #   Source struct: basin_module.f90 :: basin_parms (42 real + 2 integer).
+  #   Read by: basin_read_prm.f90 via list-directed read(107,*).
+  #   line: 2 = data row (after 1-line title header in Ames_sub1 format).
+  #   maxNum: 1 — single value applies globally.
+  # ===========================================================================
+
+  lai_noevap:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 1, width: 12, precision: 5, maxNum: 1}
+
+  sw_init:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 13, width: 12, precision: 5, maxNum: 1}
+
+  surq_lag:
+    type: float
+    bounds: [0.05, 24.0]
+    file: {name: "parameters.bsn", line: 2, start: 25, width: 12, precision: 5, maxNum: 1}
+
+  adj_pkrt:
+    type: float
+    bounds: [0.0, 3.0]
+    file: {name: "parameters.bsn", line: 2, start: 37, width: 12, precision: 5, maxNum: 1}
+
+  adj_pkrt_sed:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 49, width: 12, precision: 5, maxNum: 1}
+
+  lin_sed:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 61, width: 12, precision: 5, maxNum: 1}
+
+  exp_sed:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 73, width: 12, precision: 5, maxNum: 1}
+
+  orgn_min:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 85, width: 12, precision: 5, maxNum: 1}
+
+  n_uptake:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 97, width: 12, precision: 5, maxNum: 1}
+
+  p_uptake:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 109, width: 12, precision: 5, maxNum: 1}
+
+  n_perc:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 121, width: 12, precision: 5, maxNum: 1}
+
+  p_perc:
+    type: float
+    bounds: [0.0, 20.0]
+    file: {name: "parameters.bsn", line: 2, start: 133, width: 12, precision: 5, maxNum: 1}
+
+  p_soil:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 145, width: 12, precision: 5, maxNum: 1}
+
+  p_avail:
+    type: float
+    bounds: [0.0, 2.0]
+    file: {name: "parameters.bsn", line: 2, start: 157, width: 12, precision: 5, maxNum: 1}
+
+  rsd_decomp:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 169, width: 12, precision: 5, maxNum: 1}
+
+  pest_perc:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 181, width: 12, precision: 5, maxNum: 1}
+
+  msk_co1:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 193, width: 12, precision: 5, maxNum: 1}
+
+  msk_co2:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 205, width: 12, precision: 5, maxNum: 1}
+
+  msk_x:
+    type: float
+    bounds: [0.0, 0.3]
+    file: {name: "parameters.bsn", line: 2, start: 217, width: 12, precision: 5, maxNum: 1}
+
+  nperco_lchtile:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 229, width: 12, precision: 5, maxNum: 1}
+
+  evap_adj:
+    type: float
+    bounds: [0.0, 2.0]
+    file: {name: "parameters.bsn", line: 2, start: 241, width: 12, precision: 5, maxNum: 1}
+
+  scoef:
+    type: float
+    bounds: [0.0, 2.0]
+    file: {name: "parameters.bsn", line: 2, start: 253, width: 12, precision: 5, maxNum: 1}
+
+  denit_exp:
+    type: float
+    bounds: [0.0, 3.0]
+    file: {name: "parameters.bsn", line: 2, start: 265, width: 12, precision: 5, maxNum: 1}
+
+  denit_frac:
+    type: float
+    bounds: [0.0, 2.0]
+    file: {name: "parameters.bsn", line: 2, start: 277, width: 12, precision: 5, maxNum: 1}
+
+  man_bact:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 289, width: 12, precision: 5, maxNum: 1}
+
+  adj_uhyd:
+    type: float
+    bounds: [-.inf, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 301, width: 12, precision: 5, maxNum: 1}
+
+  cn_froz:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 313, width: 12, precision: 5, maxNum: 1}
+
+  dorm_hr:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 325, width: 12, precision: 5, maxNum: 1}
+
+  plaps:
+    type: float
+    bounds: [-1000.0, 1000.0]
+    file: {name: "parameters.bsn", line: 2, start: 337, width: 12, precision: 5, maxNum: 1}
+
+  tlaps:
+    type: float
+    bounds: [-10.0, 10.0]
+    file: {name: "parameters.bsn", line: 2, start: 349, width: 12, precision: 5, maxNum: 1}
+
+  n_fix_max:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 361, width: 12, precision: 5, maxNum: 1}
+
+  rsd_decay:
+    type: float
+    bounds: [0.0, 0.1]
+    file: {name: "parameters.bsn", line: 2, start: 373, width: 12, precision: 5, maxNum: 1}
+
+  rsd_cover:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "parameters.bsn", line: 2, start: 385, width: 12, precision: 5, maxNum: 1}
+
+  urb_init_abst:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 397, width: 12, precision: 5, maxNum: 1}
+
+  petco_pmpt:
+    type: float
+    bounds: [0.0, 200.0]
+    file: {name: "parameters.bsn", line: 2, start: 409, width: 12, precision: 5, maxNum: 1}
+
+  uhyd_alpha:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 421, width: 12, precision: 5, maxNum: 1}
+
+  splash:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 433, width: 12, precision: 5, maxNum: 1}
+
+  rill:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 445, width: 12, precision: 5, maxNum: 1}
+
+  surq_exp:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 457, width: 12, precision: 5, maxNum: 1}
+
+  cov_mgt:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 469, width: 12, precision: 5, maxNum: 1}
+
+  cha_d50:
+    type: float
+    bounds: [0.0, 500.0]
+    file: {name: "parameters.bsn", line: 2, start: 481, width: 12, precision: 5, maxNum: 1}
+
+  co2:
+    type: float
+    bounds: [0.0, 1000.0]
+    file: {name: "parameters.bsn", line: 2, start: 493, width: 12, precision: 5, maxNum: 1}
+
+  day_lag_max:
+    type: int
+    bounds: [0, .inf]
+    file: {name: "parameters.bsn", line: 2, start: 505, width: 12, precision: 0, maxNum: 1}
+
+  igen:
+    type: int
+    bounds: [0, 5]
+    file: {name: "parameters.bsn", line: 2, start: 517, width: 12, precision: 0, maxNum: 1}
+
+  # ===========================================================================
+  # Group B: hydrology.hyd — per-HRU hydrologic parameters
+  #   Format: 23-char name column + 14 fields × 14-char slots.
+  #   Source struct: channel/hydrology modules.
+  #   Per-HRU filtering via parameters.physical[].filter.
+  #   line: 2 = data row (after 1-line title header in Ames_sub1 format).
+  #   maxNum: 1.
+  # ===========================================================================
+
+  lat_ttime:
+    type: float
+    bounds: [0.0, 180.0]
+    file: {name: "hydrology.hyd", line: 2, start: 24, width: 14, precision: 5, maxNum: 1}
+
+  lat_sed:
+    type: float
+    bounds: [0.0, 5000.0]
+    file: {name: "hydrology.hyd", line: 2, start: 38, width: 14, precision: 5, maxNum: 1}
+
+  can_max:
+    type: float
+    bounds: [0.0, 100.0]
+    file: {name: "hydrology.hyd", line: 2, start: 52, width: 14, precision: 5, maxNum: 1}
+
+  esco:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "hydrology.hyd", line: 2, start: 66, width: 14, precision: 5, maxNum: 1}
+
+  epco:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "hydrology.hyd", line: 2, start: 80, width: 14, precision: 5, maxNum: 1}
+
+  orgn_enrich:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "hydrology.hyd", line: 2, start: 94, width: 14, precision: 5, maxNum: 1}
+
+  orgp_enrich:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "hydrology.hyd", line: 2, start: 108, width: 14, precision: 5, maxNum: 1}
+
+  cn3_swf:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "hydrology.hyd", line: 2, start: 122, width: 14, precision: 5, maxNum: 1}
+
+  bio_mix:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "hydrology.hyd", line: 2, start: 136, width: 14, precision: 5, maxNum: 1}
+
+  perco:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "hydrology.hyd", line: 2, start: 150, width: 14, precision: 5, maxNum: 1}
+
+  lat_orgn:
+    type: float
+    bounds: [0.0, 200.0]
+    file: {name: "hydrology.hyd", line: 2, start: 164, width: 14, precision: 5, maxNum: 1}
+
+  lat_orgp:
+    type: float
+    bounds: [0.0, 200.0]
+    file: {name: "hydrology.hyd", line: 2, start: 178, width: 14, precision: 5, maxNum: 1}
+
+  pet_co:
+    type: float
+    bounds: [0.0, 2.0]
+    file: {name: "hydrology.hyd", line: 2, start: 192, width: 14, precision: 5, maxNum: 1}
+
+  latq_co:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "hydrology.hyd", line: 2, start: 206, width: 14, precision: 5, maxNum: 1}
+
+  # ===========================================================================
+  # Group C: hyd-sed-lte.cha — channel hydrology & sediment (per-reach)
+  #   Format: variable-width name + order columns, then 21 fields × 14-char
+  #   slots.  Verified against Osu_1hru Rev 60.5.4.
+  #   Source struct: channel_module.f90.
+  #   line: 3 = first data row (line 1 title, line 2 header).
+  #   maxNum: 1 — single value per reach.
+  #   NOTE: builder.py _HRU_TARGET_FILES must be extended to include
+  #   hyd-sed-lte.cha before per-reach filter expansion works.
+  # ===========================================================================
+
+  ch_wd:
+    type: float
+    bounds: [0.5, 1000.0]
+    file: {name: "hyd-sed-lte.cha", line: 3, start: 42, width: 14, precision: 5, maxNum: 1}
+
+  ch_dp:
+    type: float
+    bounds: [0.1, 100.0]
+    file: {name: "hyd-sed-lte.cha", line: 3, start: 56, width: 14, precision: 5, maxNum: 1}
+
+  ch_slp:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "hyd-sed-lte.cha", line: 3, start: 70, width: 14, precision: 5, maxNum: 1}
+
+  ch_len:
+    type: float
+    bounds: [0.1, 200.0]
+    file: {name: "hyd-sed-lte.cha", line: 3, start: 84, width: 14, precision: 5, maxNum: 1}
+
+  ch_mann:
+    type: float
+    bounds: [0.01, 0.3]
+    file: {name: "hyd-sed-lte.cha", line: 3, start: 98, width: 14, precision: 5, maxNum: 1}
+
+  ch_k:
+    type: float
+    bounds: [0.01, 500.0]
+    file: {name: "hyd-sed-lte.cha", line: 3, start: 112, width: 14, precision: 5, maxNum: 1}
+
+  ch_erod:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "hyd-sed-lte.cha", line: 3, start: 126, width: 14, precision: 5, maxNum: 1}
+
+  ch_cov:
+    type: float
+    bounds: [0.0, 20.0]
+    file: {name: "hyd-sed-lte.cha", line: 3, start: 140, width: 10, precision: 5, maxNum: 1}
+
+  # ===========================================================================
+  # Group D: soils.sol — soil physical properties (per-profile + per-layer)
+  #   Two-level format:
+  #     - Per-soil scalar row: name, NLY, HYD_GRP, ZMX, ANION_EXCL, CRK, TEXTURE
+  #     - Per-layer data rows (NLY lines): DEPTH, BD, AWC, K, CBN, CLAY, SILT,
+  #       SAND, ROCK, ALB, USLE_K, EC, CAL, PH
+  #   Layer data starts at col 91 (large indent after soil-name columns).
+  #   Fields are ~9-10 chars apart with irregular spacing — use narrow 9-char
+  #   territory per field to avoid cross-field overwrites.
+  #   Verified against Ames_sub1 Rev 60.5.7 refdata.
+  #   NOTE: builder.py needs per-soil + per-layer expansion support before
+  #   these entries work end-to-end.  maxNum reflects typical maximum layer
+  #   count.  line varies by soil profile and layer index within project.
+  # ===========================================================================
+
+  # --- per-soil scalar (one row per soil profile, line varies) ---
+  sol_zmx:
+    type: float
+    bounds: [0.0, 3500.0]
+    file: {name: "soils.sol", line: 3, start: 43, width: 10, precision: 3, maxNum: 1}
+
+  sol_anion_excl:
+    type: float
+    bounds: [0.01, 1.0]
+    file: {name: "soils.sol", line: 3, start: 56, width: 10, precision: 3, maxNum: 1}
+
+  sol_crk:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "soils.sol", line: 3, start: 68, width: 10, precision: 3, maxNum: 1}
+
+  # --- per-layer data (one row per layer, line varies; maxNum = NLY) ---
+  sol_depth:
+    type: float
+    bounds: [0.0, 3500.0]
+    file: {name: "soils.sol", line: 4, start: 91, width: 9, precision: 2, maxNum: 10}
+
+  sol_bd:
+    type: float
+    bounds: [0.9, 2.5]
+    file: {name: "soils.sol", line: 4, start: 101, width: 9, precision: 3, maxNum: 10}
+
+  sol_awc:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "soils.sol", line: 4, start: 111, width: 9, precision: 3, maxNum: 10}
+
+  sol_k:
+    type: float
+    bounds: [0.0, 2000.0]
+    file: {name: "soils.sol", line: 4, start: 119, width: 9, precision: 3, maxNum: 10}
+
+  sol_cbn:
+    type: float
+    bounds: [0.05, 10.0]
+    file: {name: "soils.sol", line: 4, start: 130, width: 9, precision: 3, maxNum: 10}
+
+  sol_clay:
+    type: float
+    bounds: [0.0, 100.0]
+    file: {name: "soils.sol", line: 4, start: 139, width: 9, precision: 3, maxNum: 10}
+
+  sol_silt:
+    type: float
+    bounds: [0.0, 100.0]
+    file: {name: "soils.sol", line: 4, start: 149, width: 9, precision: 3, maxNum: 10}
+
+  sol_sand:
+    type: float
+    bounds: [0.0, 100.0]
+    file: {name: "soils.sol", line: 4, start: 159, width: 9, precision: 3, maxNum: 10}
+
+  sol_rock:
+    type: float
+    bounds: [0.0, 100.0]
+    file: {name: "soils.sol", line: 4, start: 170, width: 9, precision: 3, maxNum: 10}
+
+  sol_alb:
+    type: float
+    bounds: [0.0, 1.0]
+    file: {name: "soils.sol", line: 4, start: 180, width: 9, precision: 3, maxNum: 10}
+
+  sol_usle_k:
+    type: float
+    bounds: [0.0, 0.65]
+    file: {name: "soils.sol", line: 4, start: 190, width: 9, precision: 3, maxNum: 10}
+
+  sol_ec:
+    type: float
+    bounds: [0.0, .inf]
+    file: {name: "soils.sol", line: 4, start: 200, width: 9, precision: 3, maxNum: 10}
+
+  sol_cal:
+    type: float
+    bounds: [0.0, 100.0]
+    file: {name: "soils.sol", line: 4, start: 210, width: 9, precision: 3, maxNum: 10}
+
+  sol_ph:
+    type: float
+    bounds: [3.0, 10.0]
+    file: {name: "soils.sol", line: 4, start: 220, width: 9, precision: 3, maxNum: 10}
+
+  # ===========================================================================
+  # Group E (future): hru-data.hru — HRU structural attributes
+  #   Priority: LOW.  Mostly structural, not tunable.
+  #   Filter dimensions (lu_mgt, soil, hydro_name) are discovery-side metadata.
+  # ===========================================================================
+
+  # ===========================================================================
+  # Group F (future): reservoirs.res — reservoir parameters
+  #   Priority: LOW.  Only needed when reservoir count > 0.
+  # ===========================================================================
+
+series:
+  # ---------------------------------------------------------------------------
+  # Output series — column definitions for SWAT+ text output files.
+  # Used by series.py for variable→colSpan/colNum resolution and by
+  # validate.py for known-variable / known-file checks.
+  # ---------------------------------------------------------------------------
+
+  # ---------------------------------------------------------------------------
+  # Basin-level outputs (object count = 1; 1 row / year for aa frequency)
+  # ---------------------------------------------------------------------------
+  - file: basin_wb_aa.txt
+    object: basin
+    report: wb
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: PREC
+        colSpan: [1, 12]
+      - name: ET
+        colSpan: [13, 24]
+      - name: WYLD
+        colSpan: [25, 36]
+      - name: PERC
+        colSpan: [37, 48]
+      - name: SURQ
+        colSpan: [49, 60]
+
+  - file: basin_nb_aa.txt
+    object: basin
+    report: nb
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: ORGN
+        colNum: 1
+      - name: ORGP
+        colNum: 2
+      - name: NO3
+        colNum: 3
+      - name: NH4
+        colNum: 4
+      - name: TN
+        colNum: 5
+      - name: TP
+        colNum: 6
+
+  - file: basin_ls_aa.txt
+    object: basin
+    report: ls
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: SED_YLD
+        colNum: 1
+
+  - file: basin_pw_aa.txt
+    object: basin
+    report: pw
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: BIOM
+        colNum: 1
+      - name: YLD
+        colNum: 2
+
+  - file: basin_crop_yld_aa.txt
+    object: basin
+    report: crop_yld
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: YLD
+        colNum: 1
+
+  # --- HRU-level (object count = 12; mode: v, no filter) ---
+  - file: hru_wb_aa.txt
+    object: hru
+    report: wb
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: PREC
+        colSpan: [1, 12]
+      - name: ET
+        colSpan: [13, 24]
+      - name: WYLD
+        colSpan: [25, 36]
+      - name: PERC
+        colSpan: [37, 48]
+      - name: SURQ
+        colSpan: [49, 60]
+
+  - file: hru_nb_aa.txt
+    object: hru
+    report: nb
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: ORGN
+        colNum: 1
+      - name: ORGP
+        colNum: 2
+      - name: NO3
+        colNum: 3
+      - name: NH4
+        colNum: 4
+      - name: TN
+        colNum: 5
+      - name: TP
+        colNum: 6
+
+  - file: hru_ls_aa.txt
+    object: hru
+    report: ls
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: SED_YLD
+        colNum: 1
+
+  - file: hru_pw_aa.txt
+    object: hru
+    report: pw
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: BIOM
+        colNum: 1
+      - name: YLD
+        colNum: 2
+
+  # ---------------------------------------------------------------------------
+  # hydrology output — user-defined monitoring points (hydout)
+  #   Format: 10 metadata tokens + data tokens (whitespace-delimited).
+  #   flo is token 11 (colNum: 11) after jday,mon,day,yr,name,type,objtyp,
+  #   typ_no,hyd_typ,fraction.  Units: m³/s.
+  #   Verified against Ames_sub1 hydout_aa.txt header.
+  # ---------------------------------------------------------------------------
+  - file: hydout_aa.txt
+    object: hyd
+    report: wb
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: FLOW_OUT
+        colNum: 11
+
+  - file: hydout_yr.txt
+    object: hyd
+    report: wb
+    frequency: yr
+    header_lines: 1
+    variables:
+      - name: FLOW_OUT
+        colNum: 11
+
+  - file: hydout_mon.txt
+    object: hyd
+    report: wb
+    frequency: mo
+    header_lines: 1
+    variables:
+      - name: FLOW_OUT
+        colNum: 11
+
+  - file: hydout_day.txt
+    object: hyd
+    report: wb
+    frequency: da
+    header_lines: 1
+    variables:
+      - name: FLOW_OUT
+        colNum: 11
+
+  # --- hydrology input (hydin) ---
+  - file: hydin_aa.txt
+    object: hyd
+    report: wb
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: FLOW_IN
+        colNum: 11
+
+  - file: hydin_yr.txt
+    object: hyd
+    report: wb
+    frequency: yr
+    header_lines: 1
+    variables:
+      - name: FLOW_IN
+        colNum: 11
+
+  - file: hydin_mon.txt
+    object: hyd
+    report: wb
+    frequency: mo
+    header_lines: 1
+    variables:
+      - name: FLOW_IN
+        colNum: 11
+
+  - file: hydin_day.txt
+    object: hyd
+    report: wb
+    frequency: da
+    header_lines: 1
+    variables:
+      - name: FLOW_IN
+        colNum: 11
+
+  # ---------------------------------------------------------------------------
+  # basin water balance — higher frequencies
+  #   Same colSpan positions as basin_wb_aa.txt (verified against file header).
+  # ---------------------------------------------------------------------------
+  - file: basin_wb_yr.txt
+    object: basin
+    report: wb
+    frequency: yr
+    header_lines: 1
+    variables:
+      - name: PREC
+        colSpan: [1, 12]
+      - name: ET
+        colSpan: [13, 24]
+      - name: WYLD
+        colSpan: [25, 36]
+      - name: PERC
+        colSpan: [37, 48]
+      - name: SURQ
+        colSpan: [49, 60]
+
+  - file: basin_wb_mon.txt
+    object: basin
+    report: wb
+    frequency: mo
+    header_lines: 1
+    variables:
+      - name: PREC
+        colSpan: [1, 12]
+      - name: ET
+        colSpan: [13, 24]
+      - name: WYLD
+        colSpan: [25, 36]
+      - name: PERC
+        colSpan: [37, 48]
+      - name: SURQ
+        colSpan: [49, 60]
+
+  - file: basin_wb_day.txt
+    object: basin
+    report: wb
+    frequency: da
+    header_lines: 1
+    variables:
+      - name: PREC
+        colSpan: [1, 12]
+      - name: ET
+        colSpan: [13, 24]
+      - name: WYLD
+        colSpan: [25, 36]
+      - name: PERC
+        colSpan: [37, 48]
+      - name: SURQ
+        colSpan: [49, 60]
+
+  # ---------------------------------------------------------------------------
+  # channel per-reach output — higher frequencies
+  #   Format from channel_output.f90: 4i6,2i8,2x,a,60e15.4.
+  #   Metadata tokens: jday, mon, day, yr, unit, gis_id, name (7 tokens).
+  #   flo_in = token 8, flo_out = token 9.  Units: ha-m.
+  #   Only generated when project has routing reaches (sp_ob%chan > 0).
+  # ---------------------------------------------------------------------------
+  - file: channel_aa.txt
+    object: channel
+    report: wb
+    frequency: aa
+    header_lines: 1
+    variables:
+      - name: flo_out
+        colNum: 9
+      - name: flo_in
+        colNum: 8
+
+  - file: channel_yr.txt
+    object: channel
+    report: wb
+    frequency: yr
+    header_lines: 1
+    variables:
+      - name: flo_out
+        colNum: 9
+      - name: flo_in
+        colNum: 8
+
+  - file: channel_mon.txt
+    object: channel
+    report: wb
+    frequency: mo
+    header_lines: 1
+    variables:
+      - name: flo_out
+        colNum: 9
+      - name: flo_in
+        colNum: 8
+
+  - file: channel_day.txt
+    object: channel
+    report: wb
+    frequency: da
+    header_lines: 1
+    variables:
+      - name: flo_out
+        colNum: 9
+      - name: flo_in
+        colNum: 8

@@ -4,6 +4,7 @@ __pycache__/
 .pytest_tmp_build/
 .pytest_work/
 .venv/
+.venv-py312/
 .codex
 venv/
 build/
@@ -14,3 +15,6 @@ work/
 .mindfs
 .claude/settings.local.json
 qi
+.DS_Store
+.tmp_*
+*.out

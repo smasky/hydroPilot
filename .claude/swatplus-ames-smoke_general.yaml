@@ -1,0 +1,97 @@
+version: general
+basic:
+  projectPath: /Users/smasky/Downloads/swatplus-main/refdata/Ames_sub1
+  workPath: /Users/smasky/Desktop/hydroPilot/hydroPilot/.claude/work
+  command: /Users/smasky/Downloads/swatplus-main/build/swatplus-unknown-gnu-mac_arm64-Rel
+  timeout: -1
+  parallel: 1
+  keepInstances: false
+parameters:
+  design:
+    - index: 0
+      name: surq_lag
+      type: float
+      bounds: [0.05, 24.0]
+    - index: 1
+      name: esco
+      type: float
+      bounds: [0.0, 1.0]
+  physical:
+    - index: 0
+      name: surq_lag
+      type: float
+      mode: v
+      bounds: [0.05, 24.0]
+      writerType: formatted_text
+      file:
+        name: calibration.cal
+        row: 5
+        col: 30
+        width: 16
+        precision: 6
+        _skel: 'Number of parameters:
+
+          2
+
+
+          NAME        CHG_TYPE             VAL    CONDS    LYR1    LYR2   YEAR1   YEAR2    DAY1    DAY2OBJ_TOT
+
+          surq_lag     absval                  0.000000        0       0       0       0        0       0       0       0
+
+          esco         absval                  0.000000        0       0       0       0        0       0       0       0
+
+          '
+    - index: 1
+      name: esco
+      type: float
+      mode: v
+      bounds: [0.0, 1.0]
+      writerType: formatted_text
+      file:
+        name: calibration.cal
+        row: 6
+        col: 30
+        width: 16
+        precision: 6
+        _skel: 'Number of parameters:
+
+          2
+
+
+          NAME        CHG_TYPE             VAL    CONDS    LYR1    LYR2   YEAR1   YEAR2    DAY1    DAY2OBJ_TOT
+
+          surq_lag     absval                  0.000000        0       0       0       0        0       0       0       0
+
+          esco         absval                  0.000000        0       0       0       0        0       0       0       0
+
+          '
+  hardBound: true
+  transformer: null
+series:
+  - id: flow
+    desc: flow
+    sim:
+      readerType: text
+      file: basin_wb_aa.txt
+      rowRanges:
+        - [4, 4, 1]
+        - [5, 5, 1]
+        - [6, 6, 1]
+        - [7, 7, 1]
+      colSpan: [25, 36]
+    obs:
+      readerType: text
+      file: swatplus-ames-smoke-obs.txt
+      rowRanges:
+        - [1, 4]
+      colNum: 1
+objectives:
+  - id: obj_flow
+    ref: flow.sim
+    desc: obj_flow
+    sense: max
+    on_error: -.inf
+reporter:
+  flushInterval: 50
+  holdingPenLimit: 20
+  series: []

@@ -1,0 +1,36 @@
+version: swatplus
+
+basic:
+  projectPath: /Users/smasky/Downloads/swatplus-main/refdata/Ames_sub1
+  workPath: ./work
+  command: /Users/smasky/Downloads/swatplus-main/build/swatplus-unknown-gnu-mac_arm64-Rel
+  parallel: 1
+
+parameters:
+  design:
+    - name: surq_lag
+      bounds: [0.05, 24.0]
+    - name: esco
+      bounds: [0.0, 1.0]
+  physical:
+    - name: surq_lag
+      mode: v
+    - name: esco
+      mode: v
+
+series:
+  - id: flow
+    sim:
+      file: basin_wb_aa.txt
+      variable: WYLD
+      id: 1
+      period: [1977, 1980]
+    obs:
+      file: swatplus-ames-smoke-obs.txt
+      rowRanges: [[1, 4]]
+      colNum: 1
+
+objectives:
+  - id: obj_flow
+    ref: flow.sim
+    sense: max

@@ -24,6 +24,8 @@ def get_template(version: str) -> ModelTemplate:
 
 # Register built-in templates
 from .swat.template import SwatTemplate
+from .swatplus.template import SwatPlusTemplate
 from .xaj.template import XajTemplate
 register_template("swat", SwatTemplate)
+register_template("swatplus", SwatPlusTemplate)
 register_template("xaj", XajTemplate)

@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture that exists in the current HydroPilot codebase. It is intentionally implementation-oriented: the goal is to explain the real execution path in `src/hydropilot`, not an idealized future design.
+This document describes the architecture that exists in the current HydroPilot codebase. It is intentionally implementation-oriented: the goal is to explain the real execution path in `src/hydropilot` as it runs today, rather than an idealized future design.
 
 ## Overview
 
@@ -23,7 +23,7 @@ Runtime chain
     -> RunReporter
 ```
 
-These chains are related but not identical.
+These chains are related but distinct.
 
 - The config chain turns a user YAML file into a validated `RunConfig`.
 - The runtime chain uses that `RunConfig` to execute model runs, extract outputs, evaluate metrics, and persist results.
@@ -186,7 +186,7 @@ It:
 - exposes runtime metadata such as input bounds and output counts
 - delegates evaluation to `Session.evaluate()`
 
-`SimModel` is a thin API facade, not the orchestration layer.
+`SimModel` is a thin API facade — the real orchestration lives in `Session` and `Executor`.
 
 ### 2. Session
 
@@ -287,7 +287,7 @@ This separation keeps the optimization-facing parameter space distinct from file
 
 HydroPilot currently runs the external model through `SubprocessRunner`.
 
-At this layer, HydroPilot does not simulate the model itself. It:
+At this layer, HydroPilot does not simulate the model. It:
 
 - prepares an isolated working copy
 - executes the configured command in that working copy
@@ -318,7 +318,7 @@ Important behavior:
 - derived values used only by diagnostics can fail as warnings
 - diagnostics are warning-oriented and fall back to configured `on_error` values
 
-This allows HydroPilot to distinguish between failures that invalidate the run and failures that should merely be recorded.
+This lets HydroPilot distinguish between failures that invalidate the run and failures that should merely be recorded.
 
 ## Runtime Context and Error Handling
 
@@ -352,7 +352,7 @@ If a run ends with an error:
 - configured `on_error` defaults are applied to objectives, constraints, and diagnostics
 - the run record is still submitted to the reporter when possible
 
-This design favors batch robustness: one failed run should not necessarily prevent recording or completing the rest of the batch.
+This design favors batch robustness: one failed run doesn't necessarily prevent recording or completing the rest of the batch.
 
 ## Reporting and Persistence
 

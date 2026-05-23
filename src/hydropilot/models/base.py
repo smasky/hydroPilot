@@ -28,3 +28,9 @@ class ModelTemplate:
         raw = copy.deepcopy(raw)
         raw["version"] = "general"
         return raw
+
+    def validate(self, raw: Dict[str, Any], base_path: Path) -> list:
+        return []
+
+    def translate_exception(self, raw: Dict[str, Any], exc: Exception):
+        return None

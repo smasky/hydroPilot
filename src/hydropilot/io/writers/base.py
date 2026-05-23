@@ -28,3 +28,12 @@ class ParamWriter(ABC):
         vals: List[float],
     ) -> List[dict]:
         """Apply parameter values and write to the output file."""
+
+    def initialize(self, output_filepath: str) -> None:
+        """Optional: write static file structure once per instance.
+
+        Called exactly once after the project copy is created.  Writers that
+        need to set up headers, record skeletons, or other fixed content
+        override this method.  The per‑run ``set_values_and_save`` then only
+        writes dynamic values.
+        """

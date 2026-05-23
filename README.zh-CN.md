@@ -1,4 +1,4 @@
-[English](./README.md) | [简体中文](./README.zh-CN.md)
+[English](./README.md) | [简体中文](./README.zh-CN.md) | [中文文档](./docs/cn/index.md)
 
 # HydroPilot
 
@@ -6,7 +6,7 @@
 
 HydroPilot 希望把水文建模周边那些重复的胶水代码收敛成一条可复用工作流：参数映射、输入写入、模型执行、结果提取、目标计算与运行记录。
 
-它的核心是模型无关的。就当前仓库而言, SWAT 是第一个内置模板，也是目前最成熟的集成。
+它的核心是模型无关的。就当前代码而言，`swat` 与 `xaj` 都已经以内置模板的形式接入，其中 SWAT 相关文档与示例目前更完整。
 
 ## HydroPilot 是什么
 
@@ -23,17 +23,21 @@ HydroPilot 是：
 
 - `version: general` 通用工作流模式
 - `version: swat` 模板模式
+- `version: xaj` 模板模式
 - fixed-width 参数写入
+- CSV 参数写入
 - 基于文本的序列提取
+- CSV 序列提取
 - 基于子进程的模型执行
 - 内置与外部评估函数
 - SQLite 与 CSV 结果记录
 - UQPyL 集成
 - `hydropilot-validate` CLI
 - `hydropilot-test` CLI，用于执行单次配置测试
+- `hydropilot-apply` CLI，用于将参数写入项目副本
 - `hydropilot-run` CLI，用于按给定参数执行单次正式运行
 
-目前应视为规划中、而不是已内置支持的内容：
+以下功能仍在规划阶段，尚未内置：
 
 - APEX
 - HBV
@@ -42,7 +46,7 @@ HydroPilot 是：
 
 ## 为什么要做这个
 
-在很多水文率定任务里，真正麻烦的往往不是优化算法本身，而是围绕它的一圈脚本工作：
+在很多水文率定任务里，真正麻烦的往往不是优化算法，而是算法外围那一圈脚本：
 
 - 把优化变量映射到物理参数
 - 把参数写入多个模型输入文件
@@ -69,7 +73,7 @@ HydroPilot 的目标，就是把这些重复劳动收敛成一条可复现的统
 
 - 模板会把紧凑配置展开成标准 general 配置
 - 真正的运行时执行仍然走同一套 general 流水线
-- 在当前代码库里，`swat` 是唯一内置模板
+- 当前内置模板包括 `swat` 与 `xaj`
 
 ## 安装
 
@@ -81,7 +85,7 @@ HydroPilot 已发布到 PyPI：
 pip install hydropilot
 ```
 
-从源码进行本地开发时，可以使用 editable 方式安装：
+本地开发时，用 editable 方式安装：
 
 ```bash
 pip install -e .
@@ -158,11 +162,11 @@ with SimModel("examples/test_monthly.yaml") as model:
 
 ```python
 from hydropilot.integrations import UQPyLAdapter
-from UQPyL.optimization import DE
+from UQPyL.optimization.soea import DE
 
 with UQPyLAdapter("examples/test_daily.yaml") as problem:
-    optimizer = DE(problem)
-    optimizer.run()
+    algorithm = DE()
+    algorithm.run(problem, seed=42)
 ```
 
 ## 最小 general 示例
@@ -242,12 +246,13 @@ file:
 
 ## 模板示例
 
-仓库里目前可以直接参考的 SWAT 示例包括：
+仓库里目前可以直接参考的模板示例包括：
 
 - `examples/test_daily.yaml`
 - `examples/test_monthly.yaml`
 - `examples/test_monthly_complex.yaml`
 - `examples/test_monthly_series.yaml`
+- `examples/test_xaj.yaml`
 
 一个紧凑的 SWAT 配置大致如下：
 
@@ -455,7 +460,4 @@ src/hydropilot/
 
 ## 项目总结
 
-HydroPilot 已经拥有一套可用的编排核心，也已经有了真正可运行的 SWAT 集成。下一步更关键的，不是再重新发明运行时，而是让这个框架更容易理解、更容易扩展，也更容易被别人拿来直接用。
-
-
-
+HydroPilot 已经拥有一套可用的编排核心和真正可运行的 SWAT 集成。下一步的重点不是重新发明运行时，而是让框架更容易理解、更容易扩展、更容易被人直接使用。

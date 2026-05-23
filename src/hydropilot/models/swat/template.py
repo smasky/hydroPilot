@@ -19,6 +19,14 @@ class SwatTemplate(ModelTemplate):
     locations, parameter definitions, and project file parsing.
     """
 
+    def validate(self, raw: Dict[str, Any], base_path: Path) -> list:
+        from .validate import validate_swat_config
+        return validate_swat_config(raw, base_path)
+
+    def translate_exception(self, raw: Dict[str, Any], exc: Exception):
+        from .validate import translate_swat_exception
+        return translate_swat_exception(raw, exc)
+
     def discover(self, project_path: Path) -> Dict[str, Any]:
         return discover_swat_project(project_path)
 

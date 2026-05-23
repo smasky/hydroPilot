@@ -4,6 +4,8 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
+from .initializer import InstanceInitializer
+
 
 class Workspace:
     def __init__(self, cfg, cfg_path: str):
@@ -56,6 +58,17 @@ class Workspace:
 
     def release_instance(self, path: str) -> None:
         self.runQueue.put(path)
+
+    def initialize_instances(self, initializer: "InstanceInitializer") -> None:
+        """Run ``initializer.initialize(instance_path)`` on every instance.
+
+        Called once per session after project copies exist but before any
+        run.  *initializer* must implement ``InstanceInitializer``.
+        """
+        for i in range(self.cfg.basic.parallel):
+            path = self.runPath / f"instance_{i}"
+            if path.exists():
+                initializer.initialize(str(path))
 
     def cleanup_instances(self) -> None:
         with self._cleanup_lock:

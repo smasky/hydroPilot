@@ -1,6 +1,6 @@
 # HydroPilot 教程
 
-这是一篇面向当前代码库的中文上手教程。它的目标不是逐字段解释所有配置，而是带你理解：
+这是一篇面向当前代码库的中文上手教程。它不打算逐字段解释配置，而是带你理清：
 
 - HydroPilot 解决的是什么问题
 - 一份配置是如何被校验、加载和运行的
@@ -22,7 +22,7 @@
 - 用 `SimModel` 驱动一次模型运行
 - 在运行后查看 `archive/` 目录中的结果和错误日志
 
-如果你更想了解内部结构，而不是上手使用，请直接读 [architecture.zh-CN.md](/e:/hydroPilot/docs/architecture.zh-CN.md:1)。
+如果你想了解内部结构，不想按教程一步步来，请直接读 [architecture.md](architecture.md)。
 
 ## 2. 环境准备
 
@@ -72,7 +72,7 @@ pip install -e .[dev]
 
 ## 3. 先用 5 分钟理解基本工作流
 
-HydroPilot 当前最值得先掌握的不是“所有字段怎么写”，而是这两个入口：
+HydroPilot 当前最值得先掌握的，不是”所有字段怎么写”，而是这两个入口：
 
 - `hydropilot-validate`
 - `SimModel`
@@ -135,7 +135,7 @@ python -m hydropilot.cli.validate examples/test_daily.yaml
 - 模型一定会产生你期望的输出文件
 - 提取逻辑一定能读到有效的模拟结果
 
-换句话说，`validate` 通过说明“配置在结构上成立”，但不等于“运行一定成功”。
+简单说，`validate` 通过只表示”配置在结构上成立”，不等于”运行一定成功”。
 
 ## 5. 理解一份配置长什么样
 
@@ -278,7 +278,7 @@ basic:
 - `design`：优化器看到的变量空间
 - `physical`：这些变量最终怎样写入模型输入文件
 
-也就是说，HydroPilot 不直接把优化变量塞给模型，而是先经过参数映射与写入逻辑。
+也就是说，HydroPilot 不会直接把优化变量塞给模型，而是先走参数映射与写入逻辑。
 
 如果某个设计变量是离散的，可以在 `design` 层写成：
 
@@ -401,7 +401,7 @@ objectives:
 
 ## 9. 用 Python 驱动运行
 
-当你已经有了可运行的模型工程后，可以通过 `SimModel` 使用 HydroPilot。
+当你已经有了可运行的模型工程后，可以用 `SimModel` 驱动 HydroPilot。
 
 典型用法如下：
 
@@ -592,7 +592,7 @@ pip install -e .[dev]
 
 学完这篇教程后，建议你继续看下面几类文档：
 
-- 架构文档：[architecture.zh-CN.md](/e:/hydroPilot/docs/architecture.zh-CN.md:1)
+- 架构文档：[architecture.md](architecture.md)
 - 英文版本教程：后续可与中文教程保持同构
 - 未来的配置参考文档：适合逐字段查阅
 
@@ -602,6 +602,5 @@ pip install -e .[dev]
 2. 先让 `hydropilot-validate` 通过
 3. 再确认外部模型工程和 `command` 可独立运行
 4. 最后再用 `SimModel.run()` 接进批量评估或优化流程
-
 
 

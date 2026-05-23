@@ -10,7 +10,11 @@ def apply_design_params(cfg, X, out_dir: str | Path) -> Path:
 
     services = ExecutionServices.from_config(cfg)
     ordered = _coerce_named_or_positional_values(X, [item.name for item in cfg.parameters.design], "design")
-    return _apply_with_applier(services.paramApplier, cfg, ordered, out_dir)
+    target = _prepare_target_dir(cfg, out_dir)
+    services.paramWritePlan.initialize(str(target))
+    env: dict = {"warnings": []}
+    services.paramApplier.apply(str(target), ordered, env)
+    return target
 
 
 def apply_physical_params(cfg, P, out_dir: str | Path) -> Path:
@@ -18,6 +22,7 @@ def apply_physical_params(cfg, P, out_dir: str | Path) -> Path:
 
     services = ExecutionServices.from_config(cfg)
     target = _prepare_target_dir(cfg, out_dir)
+    services.paramWritePlan.initialize(str(target))
     env: dict = {"warnings": []}
     ordered = _coerce_named_or_positional_values(P, [item.name for item in cfg.parameters.physical], "physical")
     services.paramApplier.apply(str(target), ordered, env)
@@ -51,13 +56,6 @@ def apply_from_yaml(path: str | Path) -> tuple[str, Path]:
     if mode == "design":
         return mode, apply_design_params(cfg, values, out_dir)
     return mode, apply_physical_params(cfg, values, out_dir)
-
-
-def _apply_with_applier(param_applier, cfg, values, out_dir: str | Path) -> Path:
-    target = _prepare_target_dir(cfg, out_dir)
-    env: dict = {"warnings": []}
-    param_applier.apply(str(target), np.asarray(values, dtype=float), env)
-    return target
 
 
 def _prepare_target_dir(cfg, out_dir: str | Path) -> Path:

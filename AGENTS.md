@@ -26,7 +26,7 @@ HydroPilot 是一个配置优先的水文模型实验编排框架。它把以下
 
 - `general` 是真正的模型无关核心模式
 - `template` 是模型特定的配置展开层
-- 当前唯一内置且已注册的模板是 `swat`
+- 当前内置且已注册的模板包括 `swat` 与 `xaj`
 - APEX / HBV / VIC / HEC-HMS 仍应视为规划中，而不是“已内置支持”
 
 ## 当前目录结构
@@ -41,7 +41,7 @@ src/hydropilot/
   evaluation/    # FunctionManager 与标量评估
   integrations/  # 外部优化框架适配，当前是 UQPyL
   io/            # readers / writers / runners
-  models/        # 模板注册与模型特定知识，当前主要是 swat/
+  models/        # 模板注册与模型特定知识，当前主要包括 swat/ 与 xaj/
   params/        # 参数空间、写入计划、写入应用
   reporting/     # results.db / summary.csv / error 日志
   runtime/       # Session / Workspace / Executor / Context

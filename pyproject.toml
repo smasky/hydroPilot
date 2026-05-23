@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hydropilot"
-version = "0.1.2"
+version = "0.1.3"
 description = "A hydrological model driver framework for coupling models with UQPyL"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -55,6 +55,7 @@ include = ["hydropilot*"]
 [tool.setuptools.package-data]
 hydropilot = [
     "models/swat/*.yaml",
+    "models/xaj/*.yaml",
 ]
 
 [tool.pytest.ini_options]

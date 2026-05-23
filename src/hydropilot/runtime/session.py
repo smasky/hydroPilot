@@ -15,6 +15,10 @@ class Session:
         self.workspace = Workspace(cfg, cfg_path)
         self.executor = Executor(cfg, self.workspace, reporter=None)
 
+        self.workspace.initialize_instances(
+            self.executor.services.paramWritePlan
+        )
+
         pLabels = self._physical_parameter_labels(self.cfg)
         self.reporter = RunReporter(self.workspace.archivePath, self.xLabels, pLabels, self.cfg)
         self.reporter.start()

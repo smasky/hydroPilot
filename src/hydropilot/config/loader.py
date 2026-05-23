@@ -5,7 +5,6 @@ from typing import Any, Union
 import yaml
 
 from ..models.registry import get_template
-from ..models.swat.validate import translate_swat_exception, validate_swat_config
 from ..validation.diagnostics import Diagnostic, has_error
 from ..validation.general import validate_general_config
 from .paths import resolve_config_file
@@ -87,21 +86,20 @@ def _load_raw_yaml(yaml_file: Path) -> dict[str, Any]:
 
 
 def _expand_template_config(raw: dict[str, Any], base_path: Path, version: str) -> dict[str, Any]:
-    if version == "swat":
-        diagnostics = validate_swat_config(raw, base_path)
-        if diagnostics:
-            raise ConfigPreparationError(diagnostics)
-
     try:
         template = get_template(version)
     except ValueError as exc:
         raise ConfigPreparationError([_translate_unknown_version(version, exc)]) from exc
 
+    diagnostics = template.validate(raw, base_path)
+    if diagnostics:
+        raise ConfigPreparationError(diagnostics)
+
     try:
         return template.build_config(raw, base_path)
     except (ValueError, FileNotFoundError, yaml.YAMLError, KeyError, IndexError) as exc:
-        if version == "swat":
-            translated = translate_swat_exception(raw, exc)
+        translated = template.translate_exception(raw, exc)
+        if translated is not None:
             raise ConfigPreparationError([translated]) from exc
         raise ConfigPreparationError([Diagnostic(level="error", path="config.version", message=str(exc), suggestion=None)]) from exc
 
