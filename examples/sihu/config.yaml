@@ -1,0 +1,239 @@
+# Converted from scenario.par / scenario.obj for the local sihu project.
+# Both scenario.par and HydroPilot use r as original * (1 + r).
+# COL_2 is interpreted as FLOW_OUT; the legacy reader source was unavailable.
+version: swat
+basic:
+  projectPath: ../../work/sihu_calibration/project
+  workPath: ../../work/sihu_calibration/runs
+  command: /home/wmtsky/projects/swat2012/build/swat2012
+  timeout: 180
+  parallel: 1
+  keepCopies: true
+  reset: false
+parameters:
+  design:
+  - name: CN2
+    bounds:
+    - 0.5
+    - 1.5
+  - name: GW_DELAY
+    bounds:
+    - 0.0
+    - 500.0
+  - name: ALPHA_BF
+    bounds:
+    - 0.0
+    - 1.0
+  - name: GWQMN
+    bounds:
+    - 0.0
+    - 500.0
+  - name: GW_REVAP
+    bounds:
+    - 0.02
+    - 0.2
+  - name: REVAPMN
+    bounds:
+    - 0.0
+    - 1.0
+  - name: RCHRG_DP
+    bounds:
+    - 0.0
+    - 1.0
+  - name: SOL_AWC
+    bounds:
+    - 0.5
+    - 1.5
+  - name: SOL_K
+    bounds:
+    - 0.5
+    - 1.5
+  - name: SOL_ALB
+    bounds:
+    - 0.01
+    - 0.25
+  - name: CH_N2
+    bounds:
+    - -0.01
+    - 0.3
+  - name: CH_K2
+    bounds:
+    - -0.01
+    - 500.0
+  - name: ALPHA_BNK
+    bounds:
+    - 0.05
+    - 1.0
+  - name: TLAPS
+    bounds:
+    - -10.0
+    - 10.0
+  - name: SLSUBBSN
+    bounds:
+    - 0.5
+    - 1.5
+  - name: HRU_SLP
+    bounds:
+    - 0.5
+    - 1.5
+  - name: OV_N
+    bounds:
+    - 0.5
+    - 1.5
+  - name: CANMX
+    bounds:
+    - 0.0
+    - 100.0
+  - name: ESCO
+    bounds:
+    - 0.01
+    - 1.0
+  - name: EPCO
+    bounds:
+    - 0.01
+    - 1.0
+  - name: SURLAG
+    bounds:
+    - 0.05
+    - 24.0
+  physical:
+  - name: CN2
+    mode: r
+  - name: GW_DELAY
+    mode: v
+    bounds:
+    - 0.0
+    - 500.0
+  - name: ALPHA_BF
+    mode: v
+    bounds:
+    - 0.0
+    - 1.0
+  - name: GWQMN
+    mode: v
+    bounds:
+    - 0.0
+    - 500.0
+  - name: GW_REVAP
+    mode: v
+    bounds:
+    - 0.02
+    - 0.2
+  - name: REVAPMN
+    mode: v
+    bounds:
+    - 0.0
+    - 1.0
+  - name: RCHRG_DP
+    mode: v
+    bounds:
+    - 0.0
+    - 1.0
+  - name: SOL_AWC
+    mode: r
+  - name: SOL_K
+    mode: r
+  - name: SOL_ALB
+    mode: r
+  - name: CH_N2
+    mode: v
+    bounds:
+    - -0.01
+    - 0.3
+  - name: CH_K2
+    mode: v
+    bounds:
+    - -0.01
+    - 500.0
+  - name: ALPHA_BNK
+    mode: v
+    bounds:
+    - 0.05
+    - 1.0
+  - name: TLAPS
+    mode: v
+    bounds:
+    - -10.0
+    - 10.0
+  - name: SLSUBBSN
+    mode: r
+  - name: HRU_SLP
+    mode: r
+  - name: OV_N
+    mode: r
+  - name: CANMX
+    mode: v
+    bounds:
+    - 0.0
+    - 100.0
+  - name: ESCO
+    mode: v
+    bounds:
+    - 0.01
+    - 1.0
+  - name: EPCO
+    mode: v
+    bounds:
+    - 0.01
+    - 1.0
+  - name: SURLAG
+    mode: v
+    bounds:
+    - 0.05
+    - 24.0
+  hardBound: true
+series:
+- id: flow
+  desc: Reach 40 daily flow; scenario.obj COL_2 interpreted as FLOW_OUT
+  sim:
+    file: output.rch
+    id: 40
+    variable: FLOW_OUT
+    period:
+    - 2011
+    - 2014
+  obs:
+    file: obs_flow_2011_2014.txt
+    readerType: text
+    colNum: 1
+    rowRanges:
+    - - 1
+      - 1461
+functions:
+- name: NSE
+  kind: builtin
+- name: RMSE
+  kind: builtin
+- name: PBIAS
+  kind: builtin
+derived:
+- id: nse
+  call:
+    func: NSE
+    args:
+    - flow.sim
+    - flow.obs
+- id: rmse
+  call:
+    func: RMSE
+    args:
+    - flow.sim
+    - flow.obs
+- id: pbias
+  call:
+    func: PBIAS
+    args:
+    - flow.sim
+    - flow.obs
+objectives:
+- id: obj_nse
+  ref: nse
+  sense: max
+diagnostics:
+- id: diag_rmse
+  ref: rmse
+- id: diag_pbias
+  ref: pbias
+reporter:
+  series:
+  - flow

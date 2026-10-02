@@ -206,7 +206,8 @@ It also:
 
 This makes `Session` the lifecycle boundary for one working runtime instance.
 By default, `Session.close()` removes `instance_*` directories and keeps the run `archive/`.
-Set `basic.keepInstances: true` to preserve instance directories for debugging.
+Set `basic.keepCopies: true` to preserve instance directories for debugging.
+The session captures touched input files once before running and restores them on close, preserving outputs and logs. `basic.reset: true` additionally restores inputs after every simulation; its default is `false`.
 
 ### 3. Workspace
 
@@ -226,7 +227,7 @@ Inside that run directory it:
 - copies configured observation files into `archive/` when available
 
 Instance directories are temporary by default. They are preserved only when
-`basic.keepInstances` is enabled.
+`basic.keepCopies` is enabled.
 
 The workspace also manages instance acquisition and release through a queue, so the executor can safely reuse prepared model copies.
 

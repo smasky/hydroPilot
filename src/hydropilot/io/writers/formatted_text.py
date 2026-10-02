@@ -213,7 +213,7 @@ class FormattedTextWriter(ParamWriter):
                 ub = int(ub)
 
         self.params[spec.index] = TextParameter(
-            name=spec.name,
+            name=getattr(spec, "label", spec.name),
             index=spec.index,
             entries=[
                 TextEntry(

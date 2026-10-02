@@ -82,7 +82,7 @@ hydropilot-test examples/test_daily.yaml
 功能最丰富的示例。展示了：
 
 - **参数变换器**：4 个设计参数通过 `monthly_transform.py` 映射为 6 个物理参数。设计空间的值（CN2_factor、ESCO_val 等）在写入前先经过变换。
-- **HRU 过滤**：CN2 参数按土地利用（`AGRL` 和 `URHD`）过滤。ESCO_HRU 按两个子流域范围分段（1–30 和 31–62）。过滤引擎（`filterHrus`）将 `*.mgt` 模式解析为每个 HRU 的具体文件名。
+- **HRU 过滤**：CN2 参数按土地利用（`AGRL` 和 `URHD`）过滤。`ESCO`（默认 `hru` scope） 按两个子流域范围分段（1–30 和 31–62）。过滤引擎（`filterHrus`）将 `*.mgt` 模式解析为每个 HRU 的具体文件名。
 - **多序列**：从同一个 `output.rch` 文件中读取两条序列（`flow` 和 `tn`），使用不同的列范围。
 - **多目标**：两个 NSE 目标（流量和 TN），均为最大化。
 - **诊断项**：KGE、RMSE，以及一个从 TN 序列计算的外部函数（`calc_annual_tn_load`）——诊断项被计算但不参与优化。
@@ -143,7 +143,7 @@ XAJ（新安江）模型是基于 CSV 的水文模型。其模板使用 CSV read
 一个**参数变换器**，将 4 个设计参数映射为 6 个物理参数：
 
 ```
-X[0] (CN2_factor)    → P[0] (AGRL 的 CN2)、P[1] (URHD 的 CN2)
+X[0] (CN2_factor) - 1 → P[0]、P[1]（AGRL、URHD 的 CN2 相对变化量）
 X[1] (ESCO_val)      → P[2] (子流域 1–30 的 ESCO)、P[3] (子流域 31–62 的 ESCO)
 X[2] (GW_DELAY_val)  → P[4] (全局 GW_DELAY)
 X[3] (SURLAG_val)    → P[5] (全局 SURLAG)
@@ -206,7 +206,7 @@ hydropilot-validate examples/test_daily_general.yaml
 hydropilot-test examples/test_daily.yaml
 ```
 
-这会加载配置、创建临时工程副本、写入默认参数、运行模型命令、提取结果并写出一份测试报告。测试期间强制 `parallel: 1` 且 `keepInstances: true`。
+这会加载配置、创建临时工程副本、写入默认参数、运行模型命令、提取结果并写出一份测试报告。测试期间强制 `parallel: 1` 且 `keepCopies: true`。关闭时恢复涉及的输入文件，保留输出、日志和记录写入值的参数 CSV；`reset` 仍按配置执行。
 
 ## 单次评估
 

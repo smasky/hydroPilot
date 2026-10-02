@@ -10,6 +10,8 @@ class ParamWritePlan(InstanceInitializer):
     def __init__(self, cfg):
         self.cfg = cfg
         self.write_tasks: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        self.instance_tasks: Dict[str, Dict[Tuple[str, str], Dict[str, Any]]] = {}
+        self.instanceRegistrationSummary: Dict[str, list[dict]] = {}
         self._build_plan()
 
     @staticmethod
@@ -33,7 +35,7 @@ class ParamWritePlan(InstanceInitializer):
             lib_info = writer_cls.buildSpec(raw_item)
             writer_cls.validateSpec(raw_item)
             registered_by_index.setdefault(spec.index, 0)
-            names_by_index[spec.index] = spec.name
+            names_by_index[spec.index] = spec.label
 
             raw_file_name = file_info["name"]
             has_skel = "_skel" in file_info
@@ -46,15 +48,12 @@ class ParamWritePlan(InstanceInitializer):
             for rel_file in real_files:
                 task_key = (rel_file, writer_type)
                 if task_key not in self.write_tasks:
-                    abs_file = project_root / rel_file
                     self.write_tasks[task_key] = {
                         "fileName": rel_file,
                         "writerType": writer_type,
-                        "handler": writer_cls(str(abs_file)),
                         "indices": [],
                     }
                 task = self.write_tasks[task_key]
-                handler = task["handler"]
 
                 raw_item_for_file = dict(raw_item)
                 raw_file_for_file = dict(raw_item_for_file["file"])
@@ -64,13 +63,17 @@ class ParamWritePlan(InstanceInitializer):
 
                 if has_skel:
                     # defer registration — skeleton is written during
-                    # initialize() and the handler cannot read it yet.
+                    # initialize() and the instance-local handler cannot
+                    # read it yet.
                     task.setdefault("_pending_reg", []).append(
                         (spec, lib_info_for_file, self.cfg.parameters.hardBound)
                     )
                     task["indices"].append(spec.index)
                     registered_by_index[spec.index] += 1
-                elif handler.register_param(spec, lib_info_for_file, self.cfg.parameters.hardBound):
+                else:
+                    task.setdefault("_registrations", []).append(
+                        (spec, lib_info_for_file, self.cfg.parameters.hardBound)
+                    )
                     task["indices"].append(spec.index)
                     registered_by_index[spec.index] += 1
 
@@ -86,30 +89,66 @@ class ParamWritePlan(InstanceInitializer):
                 )
 
     def initialize(self, instance_path: str) -> None:
-        """Call ``initialize()`` on every writer handler that opts in.
+        """Build instance-local writer handlers and register parameters.
 
-        Implements ``InstanceInitializer.initialize``.  Runs once per instance
-        after the project copy is created.
-
-        For skeleton-provided files (``_skel`` on the task) the skeleton is
-        written to the instance before the handler loads it, and any
-        registrations that were deferred in ``_build_plan`` (because the
-        skeleton did not exist in the source project) are replayed.
+        Implements ``InstanceInitializer.initialize``. Runs once per instance
+        after the project copy is created. Writer handlers are isolated per
+        instance so parallel runs never share mutable writer state.
         """
-        from pathlib import Path
-
         root = Path(instance_path)
-        for (_task_file, _writer_type), task in self.write_tasks.items():
-            handler = task["handler"]
+        tasks_for_instance: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        summary = {
+            spec.index: {"index": spec.index, "param": spec.label, "matchedFiles": 0, "skippedFiles": 0}
+            for spec in self.cfg.parameters.physical
+        }
+
+        for task_key, task in self.write_tasks.items():
+            writer_cls = getWriter(task["writerType"])
             target = root / task["fileName"]
+            handler = writer_cls(str(target))
 
             skel = task.get("_skel")
             pending = task.get("_pending_reg", [])
+            registrations = task.get("_registrations", [])
+
             if skel is not None:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(skel, encoding="utf-8")
-                handler.initialize(str(target))
-                for spec, lib_info, hard_bound in pending:
-                    handler.register_param(spec, lib_info, hard_bound)
-            else:
-                handler.initialize(str(target))
+
+            handler.initialize(str(target))
+
+            indices = []
+            for spec, lib_info, hard_bound in registrations + pending:
+                if handler.register_param(spec, lib_info, hard_bound):
+                    indices.append(spec.index)
+                    summary[spec.index]["matchedFiles"] += 1
+                else:
+                    summary[spec.index]["skippedFiles"] += 1
+
+            if indices:
+                tasks_for_instance[task_key] = {
+                    "fileName": task["fileName"],
+                    "writerType": task["writerType"],
+                    "handler": handler,
+                    "indices": indices,
+                }
+
+        for item in summary.values():
+            if item["matchedFiles"] == 0:
+                raise ValueError(
+                    f"No writable entries found for parameter '{item['param']}' in any target file. "
+                    "Check file pattern and fixed_width line/start/width/maxNum/selectIndex settings."
+                )
+
+        self.instance_tasks[instance_path] = tasks_for_instance
+        self.instanceRegistrationSummary[instance_path] = list(summary.values())
+
+    def get_instance_tasks(self, instance_path: str) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        try:
+            return self.instance_tasks[instance_path]
+        except KeyError as exc:
+            raise ValueError(f"Instance handlers not initialized for path: {instance_path}") from exc
+
+    def clear_instance_tasks(self) -> None:
+        self.instance_tasks.clear()
+        self.instanceRegistrationSummary.clear()

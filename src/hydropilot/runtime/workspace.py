@@ -21,6 +21,12 @@ class Workspace:
         self._archive_inputs()
 
     def _create_run_path(self) -> Path:
+        work_dir_name = getattr(self.cfg.basic, "workDirName", None)
+        if work_dir_name:
+            run_path = Path(self.cfg.basic.workPath) / work_dir_name
+            run_path.mkdir(parents=True, exist_ok=True)
+            return run_path
+
         now = datetime.now()
         base_time_str = now.strftime("%m%d_%H%M%S")
         run_path = Path(self.cfg.basic.workPath) / "tempRun" / base_time_str
@@ -35,7 +41,11 @@ class Workspace:
     def _create_instances(self) -> None:
         for i in range(self.cfg.basic.parallel):
             path = self.runPath / f"instance_{i}"
-            shutil.copytree(self.cfg.basic.projectPath, path)
+            if path.exists():
+                if not path.is_dir():
+                    raise ValueError(f"Workspace instance path exists but is not a directory: {path}")
+            else:
+                shutil.copytree(self.cfg.basic.projectPath, path)
             self.runQueue.put(str(path))
 
     def _archive_inputs(self) -> None:

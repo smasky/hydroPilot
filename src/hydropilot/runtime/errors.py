@@ -15,3 +15,8 @@ class RunError(Exception):
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+    def __deepcopy__(self, memo):
+        result = type(self)(**self.to_dict())
+        memo[id(self)] = result
+        return result

@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from ..common.params import build_design_items, resolve_physical_params
+from ..common.params import build_design_items, parameterDbKey, resolve_physical_params
+from .library import getParameterScopes, resolveParameterScope
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +184,10 @@ def expandLocations(
                 "maxNum": loc.get("maxNum", 1),
             },
         })
+        if pp.get("scope") is not None:
+            physicalItems[-1]["scope"] = pp["scope"]
+        if "selectIndex" in loc:
+            physicalItems[-1]["file"]["selectIndex"] = loc["selectIndex"]
 
     return physicalItems
 
@@ -215,6 +220,20 @@ def buildSwatParams(
 
     physical = rawParams.get("physical")
     transformer = rawParams.get("transformer")
+
+    scopes = getParameterScopes(paramDb)
+    design = [resolveParameterScope(item, scopes) for item in design]
+    if physical is not None:
+        physical = [resolveParameterScope(item, scopes) for item in physical]
+        if transformer is None:
+            designKeys = {parameterDbKey(item, paramDb) for item in design}
+            for item in physical:
+                key = parameterDbKey(item, paramDb)
+                if key not in designKeys:
+                    raise ValueError(
+                        f"Physical parameter '{key}' has no matching design parameter; "
+                        "use the same name/scope in design and physical, or provide a transformer."
+                    )
 
     # Step 1: Resolve physical params (fill defaults from SWAT parameter database)
     resolvedPhysical = resolve_physical_params(design, physical, transformer, paramDb, modelName="SWAT")

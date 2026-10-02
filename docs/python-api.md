@@ -53,15 +53,21 @@ result: BatchRunResult = model.run([
 ])
 ```
 
-- `X` — a list or numpy array of design parameter values, in the same order as defined in the config's `parameters.design` list. A 1D array runs a single evaluation; a 2D array of shape `(n_samples, n_input)` runs a batch. Named values via dict are also accepted for single evaluations: `model.run({"CN2": 72.5, "ALPHA_BF": 0.3, "GW_DELAY": 120})`.
+- `X` — a list or numpy array of design parameter values, in the same order as defined in the config's `parameters.design` list. A 1D array runs a single evaluation; a 2D array of shape `(n_samples, n_input)` runs a batch.
 - Returns a `BatchRunResult`. For batch runs, `result.objs` has shape `(n_samples, n_objectives)`.
 
-What happens internally for each evaluation:
-1. A project copy is created from `basic.projectPath` into a temporary instance directory under `basic.workPath`.
-2. Design values are transformed to physical parameters and written to model input files.
-3. The model command (`basic.command`) is executed in the project copy.
-4. Simulation output is extracted and evaluated (objectives, constraints, diagnostics).
-5. Results and artifacts are archived, and the project copy is released (or kept if `keepInstances: true`).
+`run(X)` combines parameter application, simulation, and post-processing and operates independently of UQPyL. The session prepares project copies under `basic.workPath` once and reuses them for simulations.
+
+For each sample:
+
+1. The batch scheduler `_runSimulation(X)` leases a project copy for each sample and calls `_apply(workPath, X, context)` to transform design values into physical parameters, write the inputs, and record the write details.
+2. `_simulate(workPath, context)` executes `basic.command` and extracts series from the same prepared copy. The scheduler releases that copy after extraction, assembles the owned batch context, and submits simulation snapshots for archiving. Metrics remain pending.
+3. `_post` computes derived values, objectives, constraints, and diagnostics from that context. It caches the results and submits a snapshot updating the same sample record.
+4. The reporter commits snapshots to SQLite and exports CSV files and error logs from the committed data.
+
+Closing the session drains the reporter and removes project copies unless `keepCopies: true`. Retained copies keep outputs and logs, while touched input files are restored to their session-start contents. Set `reset: true` to also restore inputs after each simulation for debugging; it defaults to `false`.
+
+The internal `_apply` and `_simulate` steps can be composed separately. `_apply` does not execute the model or allocate an evaluation record; `_simulate` uses the prepared inputs without transforming or writing parameters again. Batch scheduling handles IDs, instance ownership, error handling, and archiving. For a standalone project copy, use the public `apply_design` or `apply_params` methods below.
 
 ### `apply_design(X, out_dir)`
 
@@ -91,7 +97,7 @@ model.apply_params([0.75, 0.003, 0.22], "./my_project")
 | Property | Type | Description |
 |----------|------|-------------|
 | `nInput` | `int` | Number of design input parameters |
-| `xLabels` | `list[str]` | Names of design parameters |
+| `xLabels` | `list[str]` | Design parameter labels, including scope when present (for example `ESCO.bsn`) |
 | `lb` | `list[float]` | Lower bounds per design parameter |
 | `ub` | `list[float]` | Upper bounds per design parameter |
 | `varType` | `list[int]` | Variable type codes (0=float, 1=int, 2=discrete) |
@@ -120,6 +126,7 @@ from hydropilot import BatchRunResult
 | `cons` | `np.ndarray` or `None` | Constraint values, shape `(n_samples, n_constraints)`. `None` if no constraints defined. |
 | `diags` | `np.ndarray` or `None` | Diagnostic values, shape `(n_samples, n_diagnostics)`. `None` if no diagnostics defined. |
 | `series` | `dict[str, np.ndarray]` or `None` | Extracted time series keyed by series id, each with shape `(n_samples, n_timesteps)`. `None` if series extraction was not performed. |
+| `obs` | `dict[str, np.ndarray]` or `None` | Observation arrays keyed by series id, each with shape `(n_timesteps,)`. `None` when no observations are configured. |
 
 ### Usage
 
@@ -133,9 +140,17 @@ For a single run, array dimensions have `n_samples = 1`.
 
 ---
 
-## `UQPyLAdapter`
+## UQPyL adapter
 
-Wraps `SimModel` as a UQPyL `Problem` for use with UQPyL's optimization and analysis algorithms.
+HydroPilot provides one public UQPyL integration class:
+
+| Class | UQPyL base class | Use case |
+|-------|------------------|----------|
+| `UQPyLAdapter` | `UQPyL.problem.ModelProblem` | Optimization with simulated series; calibration with simulated and observed series |
+
+### `UQPyLAdapter`
+
+Wraps `SimModel` as a UQPyL `ModelProblem` for use with UQPyL optimization and calibration algorithms.
 
 ```python
 from hydropilot.integrations import UQPyLAdapter
@@ -143,11 +158,11 @@ from hydropilot.integrations import UQPyLAdapter
 adapter = UQPyLAdapter("path/to/config.yaml")
 ```
 
-### Description
+#### Description
 
-`UQPyLAdapter` extends `UQPyL.problem.Problem` and delegates to `SimModel` internally. It sets up the UQPyL problem definition (`nInput`, `nObj`, `nCon`, bounds, variable types, objective directions) from the hydroPilot config.
+`UQPyLAdapter` directly inherits the public interfaces of `UQPyL.problem.ModelProblem` and delegates model execution to `SimModel`. It sets up the problem definition (`nInput`, `nObj`, `nCon`, bounds, variable types, objective directions, and labels) from the HydroPilot config, and builds `obs`, `mask`, and `seriesLabels` from HydroPilot series definitions.
 
-### Context manager
+#### Context manager
 
 ```python
 with UQPyLAdapter("config.yaml") as adapter:
@@ -155,39 +170,45 @@ with UQPyLAdapter("config.yaml") as adapter:
     objs = result.objs
 ```
 
-### Methods
+#### Methods
 
-#### `evaluate(X)`
+##### `evaluate(X, target=None)`
 
 ```python
 result = adapter.evaluate(X)
 objs = result.objs
 cons = result.cons
+sim = result.sims
 ```
 
-Runs the model and returns a `UQPyL.problem.Eval` object. Compatible with UQPyL algorithms that call `evaluate()`.
+Runs the model and returns a `UQPyL.problem.Eval` object. The returned `.sims` tensor has shape `(n_samples, n_time, n_series)`.
 
-#### `objFunc(X)`
+`target` can be `None` (all fields), `"objs"`, `"cons"`, or `"sims"`. The default executes simulation and all post-processing, including archived diagnostics. Targets `"objs"` and `"cons"` compute only the selected block and its dependencies; `"sims"` skips post-processing. Every call starts a new simulation.
+
+##### Separate simulation and evaluation
+
+| Method | Result |
+|---|---|
+| `simulate(X)` | A `SimContext` subclass with `sims`, `obs`, `mask`, and full HydroPilot simulation data in `simulation`; metrics are not computed |
+| `simFunc(X)` | Simulation array with shape `(n_samples, n_time, n_series)` |
+| `objFunc(X, context)` | Compute this context's objectives and dependencies, reusing prior results |
+| `conFunc(X, context)` | Compute this context's constraints and dependencies, or return `None` if no constraints are configured |
 
 ```python
-objectives = adapter.objFunc(X)
+with UQPyLAdapter("config.yaml") as problem:
+    contextA = problem.simulate(XA)
+    contextB = problem.simulate(XB)
+    objA = problem.objFunc(XA, contextA)
+    physicalA = contextA.simulation.P
 ```
 
-Returns only the objective values as a NumPy array. Compatible with UQPyL optimizers that call `objFunc(X)`.
+Each context retains its own simulation and post-processing state. Objective/constraint calls compute the requested block without running the model again; repeated calls reuse results. These stages archive into the same sample record, including simulation-only records with pending metrics. Use a context from the same adapter with the parameters that produced it; mismatched parameters, another adapter's context, and manually constructed contexts raise `ValueError`. Native helpers `flattenSim`, `flattenObs`, and `flattenMask` are also inherited.
 
-#### `conFunc(X)`
+#### Scope
 
-```python
-constraints = adapter.conFunc(X)
-```
+The adapter provides a UQPyL `ModelProblem` interface: problem definition, simulation-backed evaluation, objective/constraint evaluation, and observed-series metadata. It does not implement UQPyL-specific analysis methods.
 
-Returns only the constraint values as a NumPy array, or `None` if no constraints are defined in the config.
-
-### Scope
-
-The adapter provides the basic UQPyL `Problem` interface: problem definition, `Eval`-returning evaluation, and objective/constraint accessors. It does not implement UQPyL-specific analysis methods (sensitivity analysis, surrogate modeling, etc.). For advanced UQPyL workflows, use the adapter as a `Problem` and call UQPyL's own analysis functions directly.
-
-### Example: using the adapter
+#### Example: using the adapter
 
 ```python
 from hydropilot.integrations import UQPyLAdapter
@@ -198,12 +219,10 @@ with UQPyLAdapter("config.yaml") as adapter:
     objs = result.objs
     cons = result.cons
 
-    # Or access objectives and constraints separately
-    objs = adapter.objFunc(X)
-    cons = adapter.conFunc(X)
+    sim = result.sims
 ```
 
-The adapter can be passed to any UQPyL algorithm that accepts a `Problem` instance.
+The adapter can be passed to any UQPyL algorithm that accepts a `ModelProblem` instance.
 
 Current UQPyL optimizers use `algorithm.run(problem)`:
 
@@ -217,3 +236,43 @@ with UQPyLAdapter("config.yaml") as problem:
     print(result.bestDecs)
     print(result.bestObjs)
 ```
+
+When observations are available, `series` entries that define `obs` are exposed as model series. Their ids become `adapter.seriesLabels`. Without observations, all configured simulation series are exposed.
+
+The adapter builds:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `obs` | `np.ndarray` or `None` | Observed values with shape `(n_time, n_series)`, if available |
+| `mask` | `np.ndarray` or `None` | Boolean mask with shape `(n_time, n_series)`; `True` marks missing observations or observation-length padding, independent of simulation results |
+| `seriesLabels` | `list[str]` | Series ids in column order |
+
+At least one simulation series is required. Observations are optional for ordinary optimization; without observations, `obs` and `mask` are `None`.
+
+#### Example: GLUE and SUFI2
+
+```python
+import numpy as np
+from UQPyL.calibration import GLUE, SUFI2
+from hydropilot.integrations import UQPyLAdapter
+
+X = np.array([
+    [72.5, 0.3, 120],
+    [65.0, 0.5, 200],
+])
+
+with UQPyLAdapter("config.yaml") as problem:
+    glue_result = GLUE(metric="rmse", verboseFlag=False).run(
+        problem,
+        X,
+        threshold=0.1,
+    )
+
+    sufi2_result = SUFI2(verboseFlag=False).run(
+        problem,
+        X,
+        eliteSize=2,
+    )
+```
+
+Use `UQPyLAdapter` for ordinary optimization and calibration. Methods that compare simulations with observations, including GLUE and SUFI2, require observed series.

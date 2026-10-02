@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Dict, List
 
+import numpy as np
+
 from .transformer import Transformer
 from ..runtime.context import append_warning
 from ..runtime.errors import RunError
@@ -15,12 +17,28 @@ class ParamApplier:
 
     def apply(self, work_path: str, X, env) -> None:
         data_source = self.transformer.transform(X)
+        env["P"] = np.array(data_source, copy=True)
 
         work_root = Path(work_path)
         all_clamp_events: List[dict] = []
         all_write_records: List[dict] = []
+        instance_tasks = self.write_plan.get_instance_tasks(work_path)
+        registrationSummary = self.write_plan.instanceRegistrationSummary.get(work_path, [])
+        env["param.registrationSummary"] = [dict(item) for item in registrationSummary]
+        for item in registrationSummary:
+            if item["skippedFiles"]:
+                append_warning(env, RunError(
+                    stage="params",
+                    code="PARTIAL_TARGET_MATCH",
+                    target=item["param"],
+                    message=(
+                        f"Parameter index {item['index']}: wrote {item['matchedFiles']} files; "
+                        f"skipped {item['skippedFiles']} files without the selected entry."
+                    ),
+                    severity="warning",
+                ))
 
-        for (_task_file, _writer_type), task in self.write_plan.write_tasks.items():
+        for (_task_file, _writer_type), task in instance_tasks.items():
             file_name = task["fileName"]
             handler = task["handler"]
             target_file = work_root / file_name
@@ -61,15 +79,18 @@ class ParamApplier:
             return
 
         total_files_by_param: Dict[str, int] = {}
-        for (_task_file, _writer_type), task in self.write_plan.write_tasks.items():
-            param_names = set()
-            handler = task["handler"]
-            for idx in task["indices"]:
-                p = handler.params.get(idx)
-                if p:
-                    param_names.add(p.name)
-            for name in param_names:
-                total_files_by_param[name] = total_files_by_param.get(name, 0) + 1
+        instance_tasks_iter = iter(self.write_plan.instance_tasks.values())
+        first_instance_tasks = next(instance_tasks_iter, None)
+        if first_instance_tasks is not None:
+            for (_task_file, _writer_type), task in first_instance_tasks.items():
+                param_names = set()
+                handler = task["handler"]
+                for idx in task["indices"]:
+                    p = handler.params.get(idx)
+                    if p:
+                        param_names.add(p.name)
+                for name in param_names:
+                    total_files_by_param[name] = total_files_by_param.get(name, 0) + 1
 
         by_param: Dict[str, List[dict]] = {}
         for ev in events:

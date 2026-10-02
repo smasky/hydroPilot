@@ -207,7 +207,8 @@ SimModel
 
 因此，`Session` 是“一次运行环境”的生命周期边界。
 默认情况下，`Session.close()` 会清理 `instance_*` 目录，只保留运行目录下的 `archive/`。
-如果需要保留运行现场用于调试，可以设置 `basic.keepInstances: true`。
+如果需要保留运行现场用于调试，可以设置 `basic.keepCopies: true`。
+会话会在运行前备份涉及的输入文件，关闭时统一恢复，输出与日志保留。另设 `basic.reset: true` 可在每次模拟后恢复输入，默认 `false`。
 
 ### 3. Workspace
 
@@ -227,7 +228,7 @@ SimModel
 - 当配置中存在 observation 文件时，把这些观测文件复制到 `archive/`
 
 默认情况下，`instance_*` 目录是临时目录，会在生命周期结束时清理。
-只有启用 `basic.keepInstances` 时才会保留。
+只有启用 `basic.keepCopies` 时才会保留。
 
 此外，workspace 还通过一个队列管理 instance 的申请和归还，让 executor 能够安全复用已经准备好的模型副本。
 

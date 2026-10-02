@@ -13,7 +13,7 @@ Chinese-language documentation is available under [`docs/cn/`](cn/index.md).
 - [Configuration reference](configuration-reference.md) — field-by-field reference for all configuration modes
 - [Examples](examples.md) — example config index and walkthrough
 - [Python API](python-api.md) — `SimModel`, `BatchRunResult`, `UQPyLAdapter`
-- [UQPyL integration](uqpyl.md) — bridge to UQPyL optimization, `Eval` protocol, optimizer patterns
+- [UQPyL integration](uqpyl.md) — bridges to UQPyL optimization and calibration workflows
 
 ### General mode
 
@@ -71,7 +71,7 @@ Primary public API exports:
 |---|---|
 | `SimModel` | Main runtime entry point for model evaluation |
 | `BatchRunResult` | Result container for batch evaluation |
-| `UQPyLAdapter` | Bridge to UQPyL optimization |
+| `UQPyLAdapter` | Bridge to UQPyL optimization and calibration |
 
 Import examples:
 

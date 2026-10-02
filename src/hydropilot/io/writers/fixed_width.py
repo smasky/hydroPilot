@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -173,7 +174,10 @@ class FixedWidthWriter(ParamWriter):
 
     @staticmethod
     def _parse_float_field(b: bytes) -> Optional[float]:
-        s = b.decode("ascii", errors="ignore").strip()
+        try:
+            s = b.decode("ascii").strip()
+        except UnicodeDecodeError:
+            return None
         if not s:
             return None
 
@@ -198,9 +202,9 @@ class FixedWidthWriter(ParamWriter):
                     "selectIndex": lib_info.file.selectIndex,
                 },
             })
-        name = spec.name
+        name = getattr(spec, "label", spec.name)
         index = spec.index
-        mode = spec.mode
+        mode = spec.modeCode
 
         typ = lib_info.type
         staPos = lib_info.file.start
@@ -230,10 +234,10 @@ class FixedWidthWriter(ParamWriter):
         for linePos in lines:
             line_idx = linePos - 1
             if line_idx < 0:
-                continue
+                raise ValueError(f"Invalid fixed_width line {linePos} in '{Path(self.filepath).name}'")
 
             if line_idx >= len(self.line_offsets):
-                continue
+                raise ValueError(f"Missing fixed_width line {linePos} in '{Path(self.filepath).name}'")
 
             line_start = self.line_offsets[line_idx]
 
@@ -241,6 +245,8 @@ class FixedWidthWriter(ParamWriter):
                 line_end = self.line_offsets[line_idx + 1]
             else:
                 line_end = len(self.base_content)
+            while line_end > line_start and self.base_content[line_end - 1] in (10, 13):
+                line_end -= 1
 
             base_offset = line_start + (staPos - 1)
 
@@ -352,13 +358,22 @@ class FixedWidthWriter(ParamWriter):
         for i in range(max_num):
             curr_off = start_offset + (i * width)
             curr_end = curr_off + width
-            if curr_end > line_end_offset:
+            remainder = bytes(self.base_content[curr_off:line_end_offset])
+            if not remainder.strip() or remainder.lstrip().startswith(b"|"):
                 break
+            if curr_end > line_end_offset:
+                raise ValueError(
+                    f"Incomplete fixed_width field in '{Path(self.filepath).name}' "
+                    f"at line={line};start={start + i * width};width={width}"
+                )
 
             raw = bytes(self.base_content[curr_off:curr_end])
             val = self._parse_float_field(raw)
-            if val is None:
-                break
+            if val is None or not math.isfinite(val):
+                raise ValueError(
+                    f"Invalid numeric fixed_width field in '{Path(self.filepath).name}' "
+                    f"at line={line};start={start + i * width};width={width}: {raw!r}"
+                )
 
             entries.append(SubEntry(offset=curr_off, original_val=val, line=line, start=start + (i * width)))
 

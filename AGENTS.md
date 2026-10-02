@@ -26,7 +26,7 @@ HydroPilot 是一个配置优先的水文模型实验编排框架。它把以下
 
 - `general` 是真正的模型无关核心模式
 - `template` 是模型特定的配置展开层
-- 当前内置且已注册的模板包括 `swat` 与 `xaj`
+- 当前内置且已注册的模板包括 `swat`、`swatplus` 与 `xaj`；具体能力和验证范围按各模型文档核对
 - APEX / HBV / VIC / HEC-HMS 仍应视为规划中，而不是“已内置支持”
 
 ## 当前目录结构
@@ -35,13 +35,13 @@ HydroPilot 是一个配置优先的水文模型实验编排框架。它把以下
 
 ```text
 src/hydropilot/
-  api/           # 对外 API，当前主要是 SimModel
-  cli/           # 命令行入口，当前已有 hydropilot-validate
+  api/           # 对外 API，主要是 SimModel / BatchRunResult
+  cli/           # 命令行入口：validate / test / apply / run
   config/        # 配置加载、路径解析、schema、RunConfig
   evaluation/    # FunctionManager 与标量评估
   integrations/  # 外部优化框架适配，当前是 UQPyL
   io/            # readers / writers / runners
-  models/        # 模板注册与模型特定知识，当前主要包括 swat/ 与 xaj/
+  models/        # 模板注册与模型特定知识：swat/、swatplus/、xaj/
   params/        # 参数空间、写入计划、写入应用
   reporting/     # results.db / summary.csv / error 日志
   runtime/       # Session / Workspace / Executor / Context
@@ -106,9 +106,15 @@ SimModel
 
 - `Session` 管生命周期：workspace、reporter、close、退出清理
 - `Workspace` 管运行目录与 instance 副本
-- `Executor` 管批量 evaluate 调度与单次 run 流程
+- `Executor` 管批量模拟调度及内部 `_apply` / `_simulate` / `_post` 流程
 - `ExecutionServices` 负责装配各能力对象
 - `RunReporter` 异步落盘结果
+
+副本生命周期：
+
+- `basic.keepCopies` 默认为 `false`，关闭会话时删除实例副本；开启时恢复涉及的输入到会话开始时的内容，保留副本、输出与日志。
+- `basic.reset` 默认为 `false`，调试时可开启，在每次模拟后恢复输入；与 `keepCopies` 独立。
+- 保留副本的输入基线每个会话只备份一次，不开启 `reset` 时不逐次恢复输入。
 
 ## 参数链路
 
@@ -134,7 +140,7 @@ X
 
 - `design parameters` 是优化器看到的输入
 - `physical parameters` 是最终写入文件的参数
-- 当前内置 writer 只有 `fixed_width`
+- 当前已注册 writer 为 `fixed_width`、`csv`、`formatted_text`
 - `writerType` 是稳定 schema，不要再移除
 - `P` 会写入运行上下文，供 reporter 使用
 
@@ -254,9 +260,13 @@ warning 会进入 `context["warnings"]`，不会直接中断整次运行。
 
 - Python API:
   - `from hydropilot import SimModel`
+  - `from hydropilot import BatchRunResult`
   - `from hydropilot.integrations import UQPyLAdapter`
 - CLI:
   - `hydropilot-validate`
+  - `hydropilot-test`
+  - `hydropilot-apply`
+  - `hydropilot-run`
 
 不要再使用旧 README 里那种路径：
 

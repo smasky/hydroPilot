@@ -1,8 +1,23 @@
 import copy
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from ...config.schema.parameters import parameterLabel
 
 DEFAULT_MODE = "v"
+
+
+def parameterDbKey(item: Dict[str, Any], paramDb: Dict[str, Any]) -> str:
+    name = item["name"]
+    scope = item.get("scope")
+    key = parameterLabel(name, scope)
+    if key in paramDb or scope is None:
+        return key
+    entry = paramDb.get(name)
+    fileName = entry.get("file", {}).get("name") if entry else None
+    if isinstance(fileName, str) and Path(fileName).suffix.lstrip(".") == scope:
+        return name
+    return key
 
 
 def auto_physical(
@@ -12,12 +27,12 @@ def auto_physical(
     modelName: str,
 ) -> Dict[str, Any]:
     name = designItem["name"]
-    dbEntry = paramDb.get(name)
+    dbEntry = paramDb.get(parameterDbKey(designItem, paramDb))
     if not dbEntry:
         raise ValueError(
             f"Unknown {modelName} parameter '{name}': not found in the {modelName} parameter database and no inline location provided."
         )
-    return {
+    result = {
         "name": name,
         "type": designItem.get("type", dbEntry["type"]),
         "mode": DEFAULT_MODE,
@@ -25,6 +40,9 @@ def auto_physical(
         "filter": None,
         "location": copy.deepcopy(dbEntry["file"]),
     }
+    if designItem.get("scope") is not None:
+        result["scope"] = designItem["scope"]
+    return result
 
 
 def merge_physical(
@@ -35,7 +53,7 @@ def merge_physical(
     modelName: str,
 ) -> Dict[str, Any]:
     name = physItem["name"]
-    dbEntry = paramDb.get(name)
+    dbEntry = paramDb.get(parameterDbKey(physItem, paramDb))
 
     location = physItem.get("location")
     if not location:
@@ -50,16 +68,17 @@ def merge_physical(
     if not paramType:
         paramType = dbEntry["type"] if dbEntry else "float"
 
-    if designItem and "bounds" in designItem:
-        bounds = designItem["bounds"]
-    elif "bounds" in physItem:
+    # Relative/additive design bounds limit changes, not the final file values.
+    if "bounds" in physItem:
         bounds = physItem["bounds"]
+    elif physItem.get("mode", DEFAULT_MODE) == "v" and designItem and "bounds" in designItem:
+        bounds = designItem["bounds"]
     elif dbEntry and "bounds" in dbEntry:
         bounds = dbEntry["bounds"]
     else:
         bounds = None
 
-    return {
+    result = {
         "name": name,
         "type": paramType,
         "mode": physItem.get("mode", DEFAULT_MODE),
@@ -67,6 +86,11 @@ def merge_physical(
         "filter": physItem.get("filter"),
         "location": location,
     }
+    if physItem.get("scope") is not None:
+        result["scope"] = physItem["scope"]
+    elif designItem and designItem.get("scope") is not None:
+        result["scope"] = designItem["scope"]
+    return result
 
 
 def resolve_physical_params(
@@ -83,11 +107,11 @@ def resolve_physical_params(
     if transformer is None:
         physByName: Dict[str, List[Dict[str, Any]]] = {}
         for p in physical:
-            physByName.setdefault(p["name"], []).append(p)
+            physByName.setdefault(parameterDbKey(p, paramDb), []).append(p)
 
         result = []
         for d in design:
-            pList = physByName.get(d["name"])
+            pList = physByName.get(parameterDbKey(d, paramDb))
             if not pList:
                 result.append(auto_physical(d, paramDb, modelName=modelName))
             else:
@@ -110,8 +134,10 @@ def build_design_items(
     designItems = []
     for d in design:
         name = d["name"]
-        dbEntry = paramDb.get(name)
+        dbEntry = paramDb.get(parameterDbKey(d, paramDb))
         item = {"name": name, "type": d.get("type", dbEntry["type"] if dbEntry else "float")}
+        if d.get("scope") is not None:
+            item["scope"] = d["scope"]
         if "bounds" in d:
             item["bounds"] = d["bounds"]
         elif dbEntry and "bounds" in dbEntry:

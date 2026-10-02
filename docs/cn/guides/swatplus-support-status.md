@@ -30,7 +30,7 @@
 
 当前模型入口在：
 
-- [`src/hydropilot/models/swatplus/template.py`](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/template.py)
+- [`src/hydropilot/models/swatplus/template.py`](../../../src/hydropilot/models/swatplus/template.py)
 
 ### 2. 参数写入主路线
 

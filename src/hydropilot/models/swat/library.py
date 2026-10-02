@@ -21,6 +21,61 @@ SWAT_PARAM_LIBRARY: Dict[str, Dict[str, Any]] = SWAT_DB.get("parameters", {})
 SWAT_SERIES_SOURCES: List[Dict[str, Any]] = SWAT_DB.get("series", [])
 
 
+def getParameterScopes(paramDb: Dict[str, Dict[str, Any]]) -> Dict[str, List[str]]:
+    scopes: Dict[str, List[str]] = {}
+    for key, entry in paramDb.items():
+        if "." in key:
+            name, scope = key.rsplit(".", 1)
+        else:
+            name = key
+            scope = Path(entry["file"]["name"]).suffix.lstrip(".")
+        scopes.setdefault(name, []).append(scope)
+    return {name: sorted(set(values)) for name, values in scopes.items()}
+
+
+def defaultParameterScope(name: str, scopes: Dict[str, List[str]]) -> Optional[str]:
+    candidates = scopes.get(name, [])
+    if len(candidates) <= 1:
+        return None
+    localScopes = [scope for scope in candidates if scope != "bsn"]
+    if len(localScopes) == 1:
+        return localScopes[0]
+    raise ValueError(f"SWAT parameter '{name}' has no unique default scope; specify one of: {', '.join(candidates)}")
+
+
+def validateParameterScope(item: Dict[str, Any], scopes: Dict[str, List[str]]) -> None:
+    name = item["name"]
+    scope = item.get("scope")
+    if not isinstance(name, str) or not name:
+        raise ValueError("SWAT parameter name must be a non-empty string")
+    if scope is not None and (not isinstance(scope, str) or not scope or any(c.isspace() for c in scope)):
+        raise ValueError("scope must be a non-empty string without whitespace")
+    if "." in name:
+        baseName, suffix = name.rsplit(".", 1)
+        if suffix in scopes.get(baseName, []):
+            raise ValueError(
+                f"SWAT parameter '{name}' must separate name and scope; use name: {baseName}, scope: {suffix}"
+            )
+    candidates = scopes.get(name, [])
+    if scope is None:
+        defaultParameterScope(name, scopes)
+    if candidates and scope is not None and scope not in candidates:
+        raise ValueError(f"invalid scope '{scope}' for SWAT parameter '{name}'; expected one of: {', '.join(candidates)}")
+
+
+def resolveParameterScope(item: Dict[str, Any], scopes: Dict[str, List[str]]) -> Dict[str, Any]:
+    validateParameterScope(item, scopes)
+    result = copy.deepcopy(item)
+    if result.get("scope") is None:
+        scope = defaultParameterScope(result["name"], scopes)
+        if scope is not None:
+            result["scope"] = scope
+    return result
+
+
+SWAT_PARAMETER_SCOPES = getParameterScopes(SWAT_PARAM_LIBRARY)
+
+
 def normalizeSwatOutputFileName(fileName: str) -> str:
     """Normalize SWAT output path-like strings to a basename."""
     text = str(fileName).replace("\\", "/")
@@ -32,7 +87,9 @@ def lookupParam(name: str) -> Optional[Dict[str, Any]]:
 
     Returns a deep copy of the entry, or None if not found.
     """
-    entry = SWAT_PARAM_LIBRARY.get(name)
+    scope = defaultParameterScope(name, SWAT_PARAMETER_SCOPES)
+    key = f"{name}.{scope}" if scope is not None else name
+    entry = SWAT_PARAM_LIBRARY.get(key)
     if entry is None:
         return None
     return copy.deepcopy(entry)
@@ -82,14 +139,16 @@ def get_swat_library(
     design_items = []
 
     for name in param_names:
-        if name not in SWAT_PARAM_LIBRARY:
+        defaultScope = defaultParameterScope(name, SWAT_PARAMETER_SCOPES)
+        key = f"{name}.{defaultScope}" if defaultScope is not None else name
+        if key not in SWAT_PARAM_LIBRARY:
             available = sorted(SWAT_PARAM_LIBRARY.keys())
             raise ValueError(
                 f"Unknown SWAT parameter '{name}'. "
                 f"Available: {available}"
             )
 
-        param_def = copy.deepcopy(SWAT_PARAM_LIBRARY[name])
+        param_def = copy.deepcopy(SWAT_PARAM_LIBRARY[key])
         user_override = overrides.get(name, {})
 
         # Apply overrides
@@ -98,17 +157,21 @@ def get_swat_library(
         if "type" in user_override:
             param_def["type"] = user_override["type"]
 
+        paramName, scope = key.rsplit(".", 1) if "." in key else (key, None)
         library_items.append({
-            "name": name,
+            "name": paramName,
             "type": param_def["type"],
             "bounds": param_def["bounds"],
             "file": param_def["file"],
         })
         design_items.append({
-            "name": name,
+            "name": paramName,
             "type": param_def["type"],
             "bounds": param_def["bounds"],
         })
+        if scope is not None:
+            library_items[-1]["scope"] = scope
+            design_items[-1]["scope"] = scope
 
     return {
         "library": {"parameter_library": library_items},

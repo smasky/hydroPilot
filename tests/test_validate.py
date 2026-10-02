@@ -19,7 +19,7 @@ def _requires_swat_validation_project():
 
 
 from hydropilot.config.loader import load_config, prepare_config
-from hydropilot.models.swat.validate import AMBIGUOUS_SWAT_PARAMETER_ALIASES, validate_swat_config
+from hydropilot.models.swat.validate import AMBIGUOUS_SWAT_PARAMETER_SCOPES, validate_swat_config
 from hydropilot.validation.entry import validate_config
 
 
@@ -29,7 +29,9 @@ def test_validate_general_config_success(tmp_path: Path):
         "basic": {
             "projectPath": ".",
             "workPath": "./work",
+            "workDirName": "named_run",
             "command": "swat.exe",
+            "reset": True,
         },
         "parameters": {
             "design": [{"name": "x1", "bounds": [0, 1]}],
@@ -84,9 +86,13 @@ def test_validate_general_config_success(tmp_path: Path):
     assert prepared.version == "general"
     assert prepared.expanded_raw == prepared.raw
     assert loaded.version == "general"
-    assert loaded.basic.keepInstances is False
+    assert loaded.basic.keepCopies is False
+    assert loaded.basic.workDirName == "named_run"
+    assert loaded.basic.reset is True
     assert resolved["version"] == "general"
-    assert resolved["basic"]["keepInstances"] is False
+    assert resolved["basic"]["keepCopies"] is False
+    assert resolved["basic"]["workDirName"] == "named_run"
+    assert resolved["basic"]["reset"] is True
     assert "configPath" not in resolved["basic"]
     assert "sets" not in resolved["parameters"]["design"][0]
     assert "sets" not in resolved["parameters"]["physical"][0]
@@ -1286,7 +1292,7 @@ def test_validate_swat_config_reports_unknown_design_parameter(tmp_path: Path):
     assert diagnostics[0].path == "parameters.design[NOT_A_SWAT_PARAM]"
 
 
-def test_validate_swat_config_reports_ambiguous_parameter_name(tmp_path: Path):
+def test_validate_swat_config_accepts_default_parameter_scope_without_warning(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()
     (project / "file.cio").write_text("", encoding="utf-8")
@@ -1307,14 +1313,10 @@ def test_validate_swat_config_reports_ambiguous_parameter_name(tmp_path: Path):
 
     diagnostics = validate_swat_config(config, tmp_path, meta_override={"timestep": "monthly", "output_start_year": 2019, "output_end_year": 2021, "n_subbasins": 1, "subbasins": {}})
 
-    assert diagnostics
-    assert diagnostics[0].path == "parameters.design[ESCO]"
-    assert "ambiguous SWAT parameter name" in diagnostics[0].message
-    assert "ESCO_BSN" in diagnostics[0].suggestion
-    assert "ESCO_HRU" in diagnostics[0].suggestion
+    assert diagnostics == []
 
 
-def test_validate_swat_config_reports_ambiguous_parameter_alias_library(tmp_path: Path):
+def test_validate_swat_config_accepts_all_default_parameter_scopes_without_warning(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()
     (project / "file.cio").write_text("", encoding="utf-8")
@@ -1328,19 +1330,13 @@ def test_validate_swat_config_reports_ambiguous_parameter_alias_library(tmp_path
             "command": "swat.exe",
         },
         "parameters": {
-            "design": [{"name": name, "bounds": [0, 1]} for name in sorted(AMBIGUOUS_SWAT_PARAMETER_ALIASES)],
+            "design": [{"name": name, "bounds": [0, 1]} for name in sorted(AMBIGUOUS_SWAT_PARAMETER_SCOPES)],
         },
         "series": [],
     }
 
     diagnostics = validate_swat_config(config, tmp_path, meta_override={"timestep": "monthly", "output_start_year": 2019, "output_end_year": 2021, "n_subbasins": 1, "subbasins": {}})
-    by_path = {item.path: item for item in diagnostics}
-
-    for name, candidates in AMBIGUOUS_SWAT_PARAMETER_ALIASES.items():
-        diagnostic = by_path[f"parameters.design[{name}]"]
-        assert "ambiguous SWAT parameter name" in diagnostic.message
-        for candidate in candidates:
-            assert candidate in diagnostic.suggestion
+    assert diagnostics == []
 
 
 def test_validate_cli_reports_yaml_root_error(tmp_path: Path):
@@ -1517,4 +1513,3 @@ def test_validate_cli_prints_success_message(tmp_path: Path):
 
     assert result.returncode == 0
     assert f"Validation passed: {config_path}" in result.stdout
-

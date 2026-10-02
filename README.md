@@ -8,13 +8,16 @@ HydroPilot turns the repetitive glue code around hydrological modeling into a re
 
 ## Current status
 
+Current source version: **0.1.4**. See the [change log](./CHANGELOG.md).
+
 What is available today:
 
 - `version: general` — model-agnostic workflow mode
 - `version: swat` — template for SWAT 2012
+- `version: swatplus` — template for SWAT+; see the [support status](./docs/guides/swatplus-support-status.md)
 - `version: xaj` — template for XAJ (Xinanjiang)
 - readers: `text`, `csv`
-- writers: `fixed_width`, `csv`
+- writers: `fixed_width`, `csv`, `formatted_text`
 - subprocess-based model execution
 - built-in and external evaluation functions
 - SQLite and CSV run reporting
@@ -31,7 +34,7 @@ Public Python API:
 
 - `SimModel` — main runtime entry point
 - `BatchRunResult` — batch evaluation result
-- `UQPyLAdapter` — bridge to UQPyL optimization
+- `UQPyLAdapter` — bridge to UQPyL optimization and calibration
 
 Planned, not yet available:
 
@@ -116,6 +119,10 @@ with UQPyLAdapter("examples/test_daily.yaml") as adapter:
     print(result.objs)
     print(result.cons)
 ```
+
+`UQPyLAdapter` directly inherits `ModelProblem` interfaces, including `evaluate(X, target=...)` and separate `simulate(X)` / `objFunc(X, context)` / `conFunc(X, context)` calls. Each context identifies one simulation; objective and constraint calls perform requested post-processing and reuse prior results. SQLite records are updated by stage, and CSV is exported from committed data. Observations are optional for ordinary optimization and required for calibration methods that compare simulations with observations.
+
+The adapter currently requires the updated UQPyL development source exposing `SimContext`, `SimulatorBase` and `ModelEvaluatorBase`. The PyPI UQPyL 2.1.6 package does not yet provide these interfaces. Install the matching UQPyL checkout with `pip install -e /path/to/UQPyL`; `SimModel` works independently of UQPyL.
 
 ## Support matrix
 

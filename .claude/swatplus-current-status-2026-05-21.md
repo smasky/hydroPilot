@@ -38,7 +38,7 @@
 
 当前 SWAT+ 模板入口在：
 
-- [src/hydropilot/models/swatplus/template.py](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/template.py)
+- [src/hydropilot/models/swatplus/template.py](../src/hydropilot/models/swatplus/template.py)
 
 当前行为：
 
@@ -61,7 +61,7 @@
 
 当前 builder 在：
 
-- [src/hydropilot/models/swatplus/builder.py](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/builder.py)
+- [src/hydropilot/models/swatplus/builder.py](../src/hydropilot/models/swatplus/builder.py)
 
 当前关键事实：
 
@@ -73,7 +73,7 @@
 
 当前 SWAT+ 专属校验在：
 
-- [src/hydropilot/models/swatplus/validate.py](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/validate.py)
+- [src/hydropilot/models/swatplus/validate.py](../src/hydropilot/models/swatplus/validate.py)
 
 当前会检查：
 

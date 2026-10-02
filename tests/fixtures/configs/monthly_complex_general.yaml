@@ -5,7 +5,7 @@ basic:
   command: swat.exe
   timeout: -1
   parallel: 1
-  keepInstances: false
+  keepCopies: false
 functions:
   - name: NSE
     kind: builtin
@@ -530,7 +530,8 @@ parameters:
         precision: 2
         maxNum: 1
     - index: 2
-      name: ESCO_HRU
+      name: ESCO
+      scope: hru
       type: float
       mode: v
       bounds: [0.0, 1.0]
@@ -543,7 +544,8 @@ parameters:
         precision: 3
         maxNum: 1
     - index: 3
-      name: ESCO_HRU
+      name: ESCO
+      scope: hru
       type: float
       mode: v
       bounds: [0.0, 1.0]
@@ -569,7 +571,8 @@ parameters:
         precision: 4
         maxNum: 1
     - index: 5
-      name: SURLAG_BSN
+      name: SURLAG
+      scope: bsn
       type: float
       mode: v
       bounds: [0.05, 24.0]

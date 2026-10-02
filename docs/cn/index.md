@@ -17,7 +17,7 @@ HydroPilot 是一个配置优先的水文模型率定、评估与优化编排框
 - [配置参考](configuration-reference.md) — 所有配置字段的逐项说明
 - [示例](examples.md) — 示例配置索引与导读
 - [Python API](python-api.md) — `SimModel`、`BatchRunResult`、`UQPyLAdapter`
-- [UQPyL 集成](uqpyl.md) — 与 UQPyL 优化器的桥接说明
+- [UQPyL 集成](uqpyl.md) — 与 UQPyL 优化与校准工作流的桥接说明
 
 ### General 模式
 
@@ -75,7 +75,7 @@ HydroPilot 提供四个命令行入口：
 |---|---|
 | `SimModel` | 模型评估的主要运行时入口 |
 | `BatchRunResult` | 批量评估的结果容器 |
-| `UQPyLAdapter` | 连接 UQPyL 优化器的适配器 |
+| `UQPyLAdapter` | 连接 UQPyL 优化与校准工作流的适配器 |
 
 导入示例：
 

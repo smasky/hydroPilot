@@ -1,5 +1,7 @@
+import logging
 import shutil
 from pathlib import Path
+from threading import Lock
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
@@ -7,18 +9,22 @@ import numpy as np
 from ..api.results import BatchRunResult
 from ..runtime.errors import RunError as SeriesRunError
 from .errors import RunError
+from .input_restore import InputRestorer
 from .services import ExecutionServices
 from .context import (
-    apply_on_error_defaults,
+    PostResult,
+    SimulationContext,
     append_warning,
     create_context,
     ensure_warnings,
     has_error,
-    set_physical_params,
     set_run_error,
     set_unexpected_error,
     to_float_or_nan,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class Executor:
@@ -29,105 +35,175 @@ class Executor:
         self.workspace = workspace
         self.reporter = reporter
         self.services = ExecutionServices.from_config(cfg)
+        self.inputRestorer = InputRestorer(self.services.paramWritePlan)
 
         self.nInput, self.xLabels, self.varType, self.varSet, self.ub, self.lb = (
             self.services.paramSpace.get_param_info()
         )
         self.nOutput, self.optType, self.nConstraints = self.services.evaluator.get_evaluation_info()
         self.optSign = [1 if s == "min" else -1 for s in self.optType]
+        self.initializeBatchCounter(0)
+
+    def initializeBatchCounter(self, batchId):
+        self._batchNo = int(batchId)
+        self._batchLock = Lock()
+        self._sourceToken = object()
 
     def run(self, X) -> BatchRunResult:
-        X = np.asarray(X)
+        simulation = self._runSimulation(X)
+        processed = self._post(simulation)
+        return BatchRunResult(
+            X=simulation.X, P=simulation.P, objs=processed.objs,
+            cons=processed.cons, diags=processed.diags,
+            series=simulation.series, obs=simulation.obs,
+        )
+
+    def _runSimulation(self, X) -> SimulationContext:
+        """Schedule parameter application and simulation on leased instances."""
+        X = np.array(X, dtype=float, copy=True)
         if X.ndim == 1:
             X = X.reshape(1, -1)
         elif X.ndim != 2:
             raise ValueError(f"Expected X to be a 1D or 2D array, got {X.ndim}D")
         if X.shape[1] != self.nInput:
             raise ValueError(f"Expected {self.nInput} input parameters, got {X.shape[1]}")
+        batchId = self._nextBatchId()
         n = X.shape[0]
-        n_obj = self.services.evaluator.nOutput
-        n_con = self.services.evaluator.nConstraints
-        n_diag = len(self.cfg.diagnostics.items)
+        if self.cfg.basic.parallel > 1:
+            with ThreadPoolExecutor(max_workers=self.cfg.basic.parallel) as pool:
+                futures = [pool.submit(self._run_one, X[i], i, batchId) for i in range(n)]
+                records = [future.result() for future in futures]
+        else:
+            records = [self._run_one(X[i], i, batchId) for i in range(n)]
 
-        objs = np.zeros((n, n_obj))
-        cons = np.full((n, n_con), self._constraint_penalty()) if n_con > 0 else None
-        diags = np.full((n, n_diag), np.nan) if n_diag > 0 else None
+        return self._finishSimulation(X, records)
+
+    def _nextBatchId(self):
+        with self._batchLock:
+            self._batchNo += 1
+            return self._batchNo
+
+    def _finishSimulation(self, X, records):
+        X = np.atleast_2d(X)
+        n = len(X)
+        series = self._build_series_buffers(records, n)
+        obs = self._build_obs_buffers()
         P = None
         if self.cfg.parameters.physical:
             P = np.full((n, len(self.cfg.parameters.physical)), np.nan)
+            for i, record in enumerate(records):
+                values = np.asarray(record.get("P", []), dtype=float).ravel()
+                P[i, :min(P.shape[1], values.size)] = values[:P.shape[1]]
+        for record in records:
+            record["archive_stage"] = "simulation"
+            for sid, values in (obs or {}).items():
+                record[f"{sid}.obs"] = values
+            record["sim_status"] = "error" if has_error(record) else "warning" if record.get("warnings") else "ok"
+            for block, config in [("obj", self.cfg.objectives), ("con", self.cfg.constraints), ("diag", self.cfg.diagnostics)]:
+                record[f"{block}_state"] = "pending" if config.items else "skipped"
+            self._notifyReporter(record)
+        return SimulationContext(X, P, series, obs, tuple(records), self._sourceToken)
 
-        batch_id = self.reporter.newBatchId()
-        records = []
+    def _post(self, simulation: SimulationContext, target=None) -> PostResult:
+        if not isinstance(simulation, SimulationContext) or simulation.sourceToken is not self._sourceToken:
+            raise ValueError("Use a simulation context created by this SimModel.")
+        targets = ("objs", "cons", "diags") if target is None else (target,)
+        if any(key not in ("objs", "cons", "diags") for key in targets):
+            raise ValueError(f"Unknown post-processing target: {target!r}")
+        blocks = {"objs": self.cfg.objectives.items, "cons": self.cfg.constraints.items,
+                  "diags": self.cfg.diagnostics.items}
+        with simulation.lock:
+            for i, record in enumerate(simulation.records):
+                state = simulation.postStates[i]
+                if set(targets) <= state.completed and (target is not None or state.fullCompleted):
+                    continue
+                if has_error(record):
+                    for key in targets:
+                        state.errors[key] = record["error"]
+                        state.values.update({item.id: item.on_error for item in blocks[key]})
+                    state.completed.update(targets)
+                    if target is None:
+                        state.fullCompleted = True
+                else:
+                    self.services.evaluator._post(record, state, targets)
+                # Match the existing finite/NaN conversion of run() and archive
+                # exactly the values returned to the caller.
+                for key in targets:
+                    for j, item in enumerate(blocks[key]):
+                        value = to_float_or_nan(state.values.get(item.id))
+                        if np.isnan(value) and key != "diags":
+                            value = self._objective_penalty(j) if key == "objs" else self._constraint_penalty()
+                        state.values[item.id] = value
+                snapshot = simulation.recordSnapshot(i)
+                snapshot["archive_stage"] = "post"
+                warning = self._notifyReporter(snapshot)
+                if warning is not None and not any(
+                    item.to_dict() == warning.to_dict() for item in record.get("warnings", []) + state.warnings
+                ):
+                    state.warnings.append(warning)
 
-        if self.cfg.basic.parallel > 1:
-            with ThreadPoolExecutor(max_workers=self.cfg.basic.parallel) as executor:
-                futures = [
-                    executor.submit(self._run_one, X[i, :], i, batch_id)
-                    for i in range(n)
-                ]
-                records = [future.result() for future in futures]
-        else:
-            for i in range(n):
-                records.append(self._run_one(X[i, :], i, batch_id))
+            def matrix(key):
+                if key not in targets or (key != "objs" and not blocks[key]):
+                    return None
+                return np.asarray([[state.values[item.id] for item in blocks[key]]
+                                   for state in simulation.postStates], dtype=float).reshape(len(simulation.records), len(blocks[key]))
+            return PostResult(matrix("objs"), matrix("cons"), matrix("diags"))
 
-        for rec in records:
-            i = int(rec["i"])
-            for j, obj_cfg in enumerate(self.cfg.objectives.items):
-                val = to_float_or_nan(rec.get(obj_cfg.id, np.nan))
-                if np.isnan(val):
-                    val = self._objective_penalty(j)
-                objs[i, j] = val
-            if cons is not None:
-                for j, con_cfg in enumerate(self.cfg.constraints.items):
-                    val = to_float_or_nan(rec.get(con_cfg.id, np.nan))
-                    if np.isnan(val):
-                        val = self._constraint_penalty()
-                    cons[i, j] = val
-            if diags is not None:
-                for j, diag_cfg in enumerate(self.cfg.diagnostics.items):
-                    diags[i, j] = to_float_or_nan(rec.get(diag_cfg.id, np.nan))
-            if P is not None:
-                p_vals = np.asarray(rec.get("P", []), dtype=float).ravel()
-                if p_vals.size:
-                    P[i, :min(P.shape[1], p_vals.size)] = p_vals[:P.shape[1]]
+    def _notifyReporter(self, record):
+        if self.reporter is None:
+            return None
+        try:
+            self.reporter.submit(record)
+        except RuntimeError as error:
+            warning = RunError(
+                stage="reporter", code="REPORTER_SUBMIT_FAILED",
+                target=str(self.workspace.archivePath),
+                message=f"Could not archive run record: {error}. Run results are returned unchanged.",
+                severity="warning",
+            )
+            if not any(item.to_dict() == warning.to_dict() for item in record.get("warnings", [])):
+                append_warning(record, warning)
+                logger.warning("batch=%s run=%s %s", record["batch_id"], record["i"] + 1, warning)
+            return warning
+        return None
 
-        series = self._build_series_buffers(records, n)
+    def _apply(self, workPath, X, context):
+        """Transform and write parameters without executing or archiving a run."""
+        self.services.paramApplier.apply(workPath, X, context)
+        return context
 
-        return BatchRunResult(
-            X=np.asarray(X),
-            P=P,
-            objs=objs,
-            cons=cons,
-            diags=diags,
-            series=series,
-        )
+    def _simulate(self, workPath, context):
+        """Execute an already prepared instance and extract its series."""
+        self.services.runner.run(workPath, self.cfg.basic.command, self.cfg.basic.timeout)
+        context = self.services.seriesExtractor.extract(workPath, context)
+        ensure_warnings(context)
+        return context
 
     def _run_one(self, X, i, batch_id):
         workPath = self.workspace.acquire_instance()
         context = create_context(X, i, batch_id)
+        restore_snapshot = None
         try:
-            self.services.paramApplier.apply(workPath, X, context)
-            set_physical_params(context, self.services.paramApplier.get_physical_params(X))
-            self.services.runner.run(workPath, self.cfg.basic.command, self.cfg.basic.timeout)
-            context = self.services.seriesExtractor.extract(workPath, context)
-            ensure_warnings(context)
-            scalars = self.services.evaluator.evaluate_all(context)
-            context.update(scalars)
-        except RunError as e:
-            self._archive_runner_logs(workPath, context, e)
-            set_run_error(context, e)
-        except Exception as e:
-            self._archive_runner_logs(workPath, context, e)
-            set_unexpected_error(context, e)
+            if getattr(self.cfg.basic, "reset", False):
+                restore_snapshot = self.inputRestorer.capture(workPath)
+            context = self._apply(workPath, X, context)
+            context = self._simulate(workPath, context)
+        except RunError as error:
+            self._archive_runner_logs(workPath, context, error)
+            set_run_error(context, error)
+        except Exception as error:
+            self._archive_runner_logs(workPath, context, error)
+            set_unexpected_error(context, error)
         finally:
-            self.workspace.release_instance(workPath)
-            if has_error(context):
-                apply_on_error_defaults(context, self.cfg)
-            if self.reporter is not None:
+            if restore_snapshot is not None:
                 try:
-                    self.reporter.submit(context)
-                except RuntimeError:
-                    pass
+                    restore_snapshot.restore()
+                except Exception as error:
+                    append_warning(context, RunError(
+                        "params", "INPUT_RESTORE_FAILED", workPath,
+                        f"Failed to restore touched input files: {error}", severity="warning",
+                    ))
+            self.workspace.release_instance(workPath)
         return context
 
     def _objective_penalty(self, j):
@@ -144,10 +220,9 @@ class Executor:
         for sid in self.cfg.series_index.keys():
             width = self._expected_series_width(sid)
             if width is None:
-                raise ValueError(
-                    f"Series '{sid}' has no fixed size in config/template; "
-                    "run(X) requires a precomputable series length"
-                )
+                actualWidths = [np.asarray(rec[f"{sid}.sim"]).size for rec in records if f"{sid}.sim" in rec]
+                obs = self.services.obsStore.get(sid)
+                width = max(actualWidths, default=0 if obs is None else np.asarray(obs).size)
             matrix = np.full((n_runs, width), np.nan)
             for rec in records:
                 row_index = int(rec["i"])
@@ -157,6 +232,19 @@ class Executor:
                 arr = np.asarray(values, dtype=float).ravel()
                 self._write_series_row(matrix, row_index, sid, arr, width, rec)
             buffers[sid] = matrix
+
+        return buffers or None
+
+    def _build_obs_buffers(self) -> dict[str, np.ndarray] | None:
+        if not self.cfg.series:
+            return None
+
+        buffers: dict[str, np.ndarray] = {}
+        for sid in self.cfg.series_index.keys():
+            obs = self.services.obsStore.get(sid)
+            if obs is None:
+                continue
+            buffers[sid] = np.asarray(obs, dtype=float).ravel()
 
         return buffers or None
 

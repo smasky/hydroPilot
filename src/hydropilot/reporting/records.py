@@ -23,7 +23,7 @@ def sanitize_labels(labels):
 
 
 def parse_report_ids(cfg):
-    allSeriesIds = [f"{k}_sim" for k in cfg.series_index.keys()]
+    allSeriesIds = [f"{k}.sim" for k in cfg.series_index.keys()]
 
     orderedScalars = []
     seen = set()
@@ -50,7 +50,7 @@ def parse_report_ids(cfg):
         outSeriesIds = []
         for s in rawOutSeries:
             s = str(s)
-            outSeriesIds.append(f"{s}_sim" if not s.endswith("_sim") else s)
+            outSeriesIds.append(f"{s}.sim" if not s.endswith(".sim") else s)
     else:
         outSeriesIds = []
 
@@ -63,6 +63,7 @@ def build_csv_fields(allScalarIds, xLabels, pLabels):
     fields += [f"X_{x}" for x in xLabels]
     if pLabels:
         fields += [f"P_{p}" for p in pLabels]
+    fields += ["sim_status", "obj_state", "con_state", "diag_state"]
     return fields
 
 
@@ -98,7 +99,7 @@ def normalize_batch_run(item):
 
 
 def record_status(item):
-    if "error" in item:
+    if "error" in item or item.get("postErrors"):
         return "error"
     if item.get("warnings"):
         return "warning"

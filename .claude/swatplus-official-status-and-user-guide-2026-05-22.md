@@ -57,7 +57,7 @@
 
 ### 2.1 模板入口
 
-- [src/hydropilot/models/swatplus/template.py](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/template.py)
+- [src/hydropilot/models/swatplus/template.py](../src/hydropilot/models/swatplus/template.py)
 
 当前行为：
 
@@ -71,7 +71,7 @@
 
 ### 2.2 校验入口
 
-- [src/hydropilot/models/swatplus/validate.py](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/validate.py)
+- [src/hydropilot/models/swatplus/validate.py](../src/hydropilot/models/swatplus/validate.py)
 
 当前会检查：
 
@@ -84,7 +84,7 @@
 
 ### 2.3 参数展开入口
 
-- [src/hydropilot/models/swatplus/builder.py](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/builder.py)
+- [src/hydropilot/models/swatplus/builder.py](../src/hydropilot/models/swatplus/builder.py)
 
 当前行为：
 
@@ -95,7 +95,7 @@
 
 ### 2.4 项目发现入口
 
-- [src/hydropilot/models/swatplus/discovery.py](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/discovery.py)
+- [src/hydropilot/models/swatplus/discovery.py](../src/hydropilot/models/swatplus/discovery.py)
 
 当前已发现：
 

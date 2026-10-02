@@ -51,6 +51,23 @@ class SeriesExtractor:
     def _read_extract(self, work_path, extract_spec):
         return read_extract(work_path, extract_spec)
 
+    def _warnSimNaN(self, sid: str, context: dict) -> None:
+        simKey = f"{sid}.sim"
+        values = np.asarray(context[simKey])
+        if not np.issubdtype(values.dtype, np.number):
+            return
+        count = int(np.isnan(values).sum())
+        if count:
+            self._append_warning(
+                context,
+                code="SIM_NAN",
+                target=simKey,
+                message=(
+                    f"Simulation series '{sid}' contains {count}/{values.size} NaN values; "
+                    "missing values are limited to this run."
+                ),
+            )
+
     def extract(self, work_path: str, context: dict) -> dict:
         env = context.copy()
 
@@ -98,5 +115,7 @@ class SeriesExtractor:
                         )
                 if obs_key not in env and obs_item is not None:
                     env[obs_key] = self.obsStore.get(sid)
+
+            self._warnSimNaN(sid, env)
 
         return env

@@ -229,7 +229,7 @@ When the optimizer should tune fewer variables than the number of physical param
 parameters:
   design:
     - name: CN2_factor      # optimizer tunes one factor
-      bounds: [-0.2, 0.2]
+      bounds: [0.8, 1.2]
     - name: ESCO_val
       bounds: [0.1, 0.9]
     - name: GW_DELAY_val
@@ -238,21 +238,26 @@ parameters:
       bounds: [0.5, 24]
 
   physical:
-    - name: CN2_AGRL
-      mode: v
+    - name: CN2
+      mode: r
       filter:
         land_use: AGRL
-    - name: CN2_URHD
-      mode: v
+    - name: CN2
+      mode: r
       filter:
         land_use: URHD
-    - name: ESCO_1_30
+    - name: ESCO
       mode: v
-    - name: ESCO_31_62
+      filter:
+        subbasin: [1, 2, 3]
+    - name: ESCO
       mode: v
+      filter:
+        subbasin: [4, 5, 6]
     - name: GW_DELAY
       mode: v
     - name: SURLAG
+      scope: bsn
       mode: v
 
   transformer: monthly_transform
@@ -268,6 +273,8 @@ functions:
 ```
 
 In this example, 4 design parameters map to 6 physical parameters via the transformer. The optimizer only sees 4 dimensions.
+
+`monthly_transform.py` subtracts 1 from the CN2 multiplier before passing it to `mode: r`: 1.0 leaves CN2 unchanged, and 0.8/1.2 decrease/increase it by 20%. Adjust the subbasin IDs of the two ESCO groups to match the project.
 
 **When to use:**
 - Spatial regularization (one factor → many HRU groups with calibrated offsets).

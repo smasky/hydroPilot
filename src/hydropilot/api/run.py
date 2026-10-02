@@ -7,10 +7,7 @@ import yaml
 from hydropilot.config.loader import load_config
 from hydropilot.reporting.records import record_status
 from hydropilot.runtime.context import (
-    apply_on_error_defaults,
     create_context,
-    ensure_warnings,
-    has_error,
     set_physical_params,
     set_run_error,
     set_unexpected_error,
@@ -66,8 +63,8 @@ def run_from_yaml(path: str | Path) -> tuple[str, SingleRunResult]:
 def run_once(cfg, config_path: str | Path, mode: str, values) -> SingleRunResult:
     session = Session(cfg, str(config_path))
     try:
-        batch_id = session.reporter.newBatchId()
-        x, context = _run_single(session, cfg, mode, values, batch_id)
+        x, context = _run_single(session, cfg, mode, values)
+        batch_id = context["batch_id"]
         session.reporter.close()
         return _build_single_run_result(config_path, cfg, session, x, batch_id, context)
     finally:
@@ -89,7 +86,7 @@ def format_run_summary(result: SingleRunResult) -> str:
         "",
         "Runtime:",
         f"  parallel: {result.cfg.basic.parallel}",
-        f"  keep project copy: {'yes' if result.cfg.basic.keepInstances else 'no'}",
+        f"  keep project copy: {'yes' if result.cfg.basic.keepCopies else 'no'}",
         f"  run path: {result.runPath}",
         f"  project copy: {result.projectCopy}",
         "",
@@ -126,28 +123,30 @@ def _resolve_input_vector(session, cfg, mode: str, values) -> np.ndarray:
     return _coerce_named_or_positional_values(values, labels, mode)
 
 
-def _run_single(session, cfg, mode: str, values, batch_id: int) -> tuple[np.ndarray, dict]:
+def _run_single(session, cfg, mode: str, values) -> tuple[np.ndarray, dict]:
     if mode == "design":
         x = _resolve_input_vector(session, cfg, mode, values)
-        return x, session.executor._run_one(x, 0, batch_id)
+        simulation = session.executor._runSimulation(x)
+        session.executor._post(simulation)
+        return x, simulation.recordSnapshot(0)
 
     p_labels = [item.name for item in cfg.parameters.physical]
     p = _coerce_named_or_positional_values(values, p_labels, mode)
     x = np.full(len(cfg.parameters.design), np.nan, dtype=float)
-    return x, _run_one_physical(session, cfg, p, batch_id)
+    batch_id = session.executor._nextBatchId()
+    record = _run_one_physical(session, cfg, p, batch_id)
+    simulation = session.executor._finishSimulation(x, [record])
+    session.executor._post(simulation)
+    return x, simulation.recordSnapshot(0)
 
 
 def _run_one_physical(session, cfg, p: np.ndarray, batch_id: int) -> dict:
     work_path = session.workspace.acquire_instance()
     context = create_context(np.full(len(cfg.parameters.design), np.nan, dtype=float), 0, batch_id)
     try:
-        session.executor.services.paramApplier.apply(work_path, p, context)
+        context = session.executor._apply(work_path, p, context)
         set_physical_params(context, p)
-        session.executor.services.runner.run(work_path, cfg.basic.command, cfg.basic.timeout)
-        context = session.executor.services.seriesExtractor.extract(work_path, context)
-        ensure_warnings(context)
-        scalars = session.executor.services.evaluator.evaluate_all(context)
-        context.update(scalars)
+        context = session.executor._simulate(work_path, context)
     except RunError as e:
         session.executor._archive_runner_logs(work_path, context, e)
         set_run_error(context, e)
@@ -156,18 +155,11 @@ def _run_one_physical(session, cfg, p: np.ndarray, batch_id: int) -> dict:
         set_unexpected_error(context, e)
     finally:
         session.workspace.release_instance(work_path)
-        if has_error(context):
-            apply_on_error_defaults(context, cfg)
-        if session.reporter is not None:
-            try:
-                session.reporter.submit(context)
-            except RuntimeError:
-                pass
     return context
 
 
 def _build_single_run_result(config_path, cfg, session, x, batch_id, context) -> SingleRunResult:
-    p = np.asarray(context.get("P", session.executor.services.paramApplier.get_physical_params(x)), dtype=float).ravel()
+    p = np.asarray(context["P"] if "P" in context else session.executor.services.paramApplier.get_physical_params(x), dtype=float).ravel()
     objs = _collect_scalars(context, [item.id for item in cfg.objectives.items], [
         session.executor._objective_penalty(i) for i, _item in enumerate(cfg.objectives.items)
     ])

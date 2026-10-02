@@ -42,7 +42,7 @@ def _write_config(tmp_path: Path, command: list[str]) -> Path:
             "workPath": str(tmp_path / "work"),
             "command": command,
             "parallel": 4,
-            "keepInstances": False,
+            "keepCopies": False,
         },
         "parameters": {
             "design": [
@@ -114,7 +114,8 @@ def test_run_config_test_forces_serial_keeps_instance_and_writes_md_report(tmp_p
 
     result = run_config_test(config_path)
 
-    assert result.status == "passed"
+    assert result.status == "warning"
+    assert [notice.code for notice in result.context["warnings"]] == ["SIM_NAN"]
     assert result.batchId == 1
     assert result.runId == 1
     assert result.runPath.name.startswith("0") or result.runPath.name
@@ -127,7 +128,7 @@ def test_run_config_test_forces_serial_keeps_instance_and_writes_md_report(tmp_p
     report = result.reportPath.read_text(encoding="utf-8")
     assert "# HydroPilot Test Report" in report
     assert "| parallel | 1 |" in report
-    assert "| keepInstances | true |" in report
+    assert "| keepCopies | true |" in report
     assert "instance_0" in report
     assert "## Inputs" in report
     assert "### Design Parameters" in report
@@ -135,6 +136,7 @@ def test_run_config_test_forces_serial_keeps_instance_and_writes_md_report(tmp_p
     assert "### Physical Parameters" in report
     assert "| p_float | 5.0 |" in report
     assert "## Results" in report
+    assert "| warning | series | SIM_NAN | flow.sim |" in report
 
     summary_header = (result.archivePath / "summary.csv").read_text(encoding="utf-8-sig").splitlines()[0]
     assert "X_x_float" in summary_header
@@ -183,8 +185,9 @@ def test_run_config_test_fixed_width_select_index_writes_only_selected_entry(tmp
 
     result = run_config_test(config_path)
 
-    assert result.status == "passed"
-    assert (result.projectCopy / "params.txt").read_text(encoding="ascii").splitlines()[1] == "  1.00  5.00  3.00"
+    assert result.status == "warning"
+    assert [notice.code for notice in result.context["warnings"]] == ["SIM_NAN"]
+    assert (result.projectCopy / "params.txt").read_text(encoding="ascii").splitlines()[1] == "  1.00  2.00  3.00"
     param_csv = (result.archivePath / "test_param.csv").read_text(encoding="utf-8-sig").splitlines()
     assert "params.txt,p_layer,2.0,5.0,line=2;start=7;width=6" in param_csv
     assert all("p_layer_1" not in row for row in param_csv)

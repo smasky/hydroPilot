@@ -1061,9 +1061,10 @@ def test_skeleton_provided_file_does_not_require_project_existence(tmp_path: Pat
     assert "surq_lag" in content
     assert "esco" in content
 
-    # handler should now have registered params (deferred replay succeeded)
-    assert len(task["handler"].params) == 2
-    assert task["handler"]._skeleton_lines  # skeleton loaded
+    # instance-local handler should now have registered params
+    inst_task = list(plan.get_instance_tasks(str(instance)).values())[0]
+    assert len(inst_task["handler"].params) == 2
+    assert inst_task["handler"]._skeleton_lines  # skeleton loaded
 
 
 def test_apply_design_writes_calibration_cal_skeleton(tmp_path: Path):

@@ -6,7 +6,7 @@
 
 HydroPilot 希望把水文建模周边那些重复的胶水代码收敛成一条可复用工作流：参数映射、输入写入、模型执行、结果提取、目标计算与运行记录。
 
-它的核心是模型无关的。就当前代码而言，`swat` 与 `xaj` 都已经以内置模板的形式接入，其中 SWAT 相关文档与示例目前更完整。
+它的核心是模型无关的。当前已注册 `swat`、`swatplus` 与 `xaj` 模板；SWAT+ 的具体能力范围见[支持状态](./docs/cn/guides/swatplus-support-status.md)。
 
 ## HydroPilot 是什么
 
@@ -19,13 +19,17 @@ HydroPilot 是：
 
 ## 当前状态
 
+当前源码版本为 **0.1.4**，修改内容见[更新记录](./CHANGELOG.md)。
+
 当前代码里已经具备的能力：
 
 - `version: general` 通用工作流模式
 - `version: swat` 模板模式
+- `version: swatplus` 模板模式
 - `version: xaj` 模板模式
 - fixed-width 参数写入
 - CSV 参数写入
+- formatted_text 参数写入
 - 基于文本的序列提取
 - CSV 序列提取
 - 基于子进程的模型执行
@@ -168,6 +172,10 @@ with UQPyLAdapter("examples/test_daily.yaml") as problem:
     algorithm = DE()
     algorithm.run(problem, seed=42)
 ```
+
+`UQPyLAdapter` 直接继承 UQPyL 的 `ModelProblem` 接口，支持 `evaluate(X, target=...)`，也支持分开调用 `simulate(X)`、`objFunc(X, context)` 和 `conFunc(X, context)`。每个 context 对应一次模拟，目标与约束调用按需后处理并复用已有结果。归档按阶段更新同一条 SQLite 记录，CSV 从已提交数据导出。普通优化可以没有观测序列，需要比较模拟与观测的校准方法仍须配置观测数据。
+
+当前适配器需要提供 `SimContext`、`SimulatorBase`、`ModelEvaluatorBase` 的 UQPyL 开发源码；PyPI 上的 UQPyL 2.1.6 尚无这些接口。请用 `pip install -e /path/to/UQPyL` 安装匹配的源码版本。`SimModel` 可独立运行，不依赖 UQPyL。
 
 ## 最小 general 示例
 

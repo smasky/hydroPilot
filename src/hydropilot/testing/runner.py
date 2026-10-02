@@ -41,8 +41,10 @@ def run_config_test(config_path: str | Path) -> ConfigTestResult:
 
     session = Session(cfg, str(config_path))
     try:
-        batch_id = session.reporter.newBatchId()
-        context = session.executor._run_one(x, 0, batch_id)
+        simulation = session.executor._runSimulation(x)
+        session.executor._post(simulation)
+        context = simulation.recordSnapshot(0)
+        batch_id = context["batch_id"]
         session.reporter.close()
         result = _build_result(config_path, cfg, session, x, batch_id, context)
         write_test_series_csv(result)
@@ -55,11 +57,11 @@ def run_config_test(config_path: str | Path) -> ConfigTestResult:
 
 def _force_test_runtime(cfg) -> None:
     cfg.basic.parallel = 1
-    cfg.basic.keepInstances = True
+    cfg.basic.keepCopies = True
 
 
 def _build_result(config_path, cfg, session, x, batch_id, context) -> ConfigTestResult:
-    p = np.asarray(context.get("P", session.executor.services.paramApplier.get_physical_params(x)), dtype=float).ravel()
+    p = np.asarray(context["P"] if "P" in context else session.executor.services.paramApplier.get_physical_params(x), dtype=float).ravel()
     objs = _collect_scalars(context, [item.id for item in cfg.objectives.items], [
         session.executor._objective_penalty(i) for i, _item in enumerate(cfg.objectives.items)
     ])

@@ -38,6 +38,8 @@ def expandLocations(
             "writerType": writerType,
             "file": fileSpec,
         }
+        if pp.get("scope") is not None:
+            item["scope"] = pp["scope"]
         if pp.get("bounds") is not None:
             item["bounds"] = pp["bounds"]
         physicalItems.append(item)

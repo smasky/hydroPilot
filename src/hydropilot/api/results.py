@@ -11,3 +11,4 @@ class BatchRunResult:
     cons: np.ndarray | None
     diags: np.ndarray | None
     series: dict[str, np.ndarray] | None
+    obs: dict[str, np.ndarray] | None = None

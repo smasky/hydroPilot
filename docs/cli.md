@@ -80,7 +80,8 @@ hydropilot-test <config.yaml>
 
 ### Usage notes
 
-- Forces `parallel = 1` and `keepInstances = true` regardless of config settings.
+- Forces `parallel = 1` and `keepCopies = true` regardless of config settings.
+- On close, restores touched inputs while retaining model outputs and logs. The parameter CSV records the applied values. `reset` remains configurable.
 - A full model execution happens — this is not a dry run.
 - Use this to verify that a config is fully wired: project files exist, the model executable runs, output files are readable, and evaluation produces results.
 

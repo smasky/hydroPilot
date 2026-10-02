@@ -51,12 +51,12 @@ CANMX:
   bounds: [0.0, 100.0]
   file: {name: "[0-9]*.hru", line: 9, start: 1, width: 16, precision: 3, maxNum: 1}
 
-ESCO_HRU:
+ESCO.hru:
   type: float
   bounds: [0.0, 1.0]
   file: {name: "[0-9]*.hru", line: 10, start: 1, width: 16, precision: 3, maxNum: 1}
 
-EPCO_HRU:
+EPCO.hru:
   type: float
   bounds: [0.0, 1.0]
   file: {name: "[0-9]*.hru", line: 11, start: 1, width: 16, precision: 3, maxNum: 1}
@@ -201,12 +201,12 @@ N_LNCO:
   bounds: [0.0, .inf]
   file: {name: "[0-9]*.hru", line: 43, start: 1, width: 16, precision: 1, maxNum: 1}
 
-SURLAG_HRU:
+SURLAG.hru:
   type: float
   bounds: [0.0, .inf]
   file: {name: "[0-9]*.hru", line: 44, start: 1, width: 16, precision: 1, maxNum: 1}
 
-R2ADJ_HRU:
+R2ADJ.hru:
   type: float
   bounds: [0.0, .inf]
   file: {name: "[0-9]*.hru", line: 45, start: 1, width: 16, precision: 1, maxNum: 1}
@@ -752,17 +752,17 @@ FLOWFR:
   bounds: [0.0, .inf]
   file: {name: "*.mgt", line: 23, start: 1, width: 16, precision: 3, maxNum: 1}
 
-DDRAIN_MGT:
+DDRAIN.mgt:
   type: float
   bounds: [0.0, .inf]
   file: {name: "*.mgt", line: 25, start: 1, width: 16, precision: 3, maxNum: 1}
 
-TDRAIN_MGT:
+TDRAIN.mgt:
   type: float
   bounds: [0.0, .inf]
   file: {name: "*.mgt", line: 26, start: 1, width: 16, precision: 3, maxNum: 1}
 
-GDRAIN_MGT:
+GDRAIN.mgt:
   type: float
   bounds: [0.0, .inf]
   file: {name: "*.mgt", line: 27, start: 1, width: 16, precision: 3, maxNum: 1}
@@ -808,12 +808,12 @@ SNO50COV:
   bounds: [0.0, 1.0]
   file: {name: "basins.bsn", line: 10, start: 1, width: 16, precision: 3, maxNum: 1}
 
-ESCO_BSN:
+ESCO.bsn:
   type: float
   bounds: [0.0, 1.0]
   file: {name: "basins.bsn", line: 13, start: 1, width: 16, precision: 3, maxNum: 1}
 
-EPCO_BSN:
+EPCO.bsn:
   type: float
   bounds: [0.0, 1.0]
   file: {name: "basins.bsn", line: 14, start: 1, width: 16, precision: 3, maxNum: 1}
@@ -828,7 +828,7 @@ FFCB:
   bounds: [0.0, .inf]
   file: {name: "basins.bsn", line: 16, start: 1, width: 16, precision: 3, maxNum: 1}
 
-SURLAG_BSN:
+SURLAG.bsn:
   type: float
   bounds: [0.05, 24.0]
   file: {name: "basins.bsn", line: 20, start: 1, width: 16, precision: 3, maxNum: 1}
@@ -1093,17 +1093,17 @@ DEPIMP_BSN:
   bounds: [0.0, .inf]
   file: {name: "basins.bsn", line: 81, start: 1, width: 16, precision: 3, maxNum: 1}
 
-DDRAIN_BSN:
+DDRAIN.bsn:
   type: float
   bounds: [0.0, .inf]
   file: {name: "basins.bsn", line: 82, start: 1, width: 16, precision: 3, maxNum: 1}
 
-TDRAIN_BSN:
+TDRAIN.bsn:
   type: float
   bounds: [0.0, .inf]
   file: {name: "basins.bsn", line: 83, start: 1, width: 16, precision: 3, maxNum: 1}
 
-GDRAIN_BSN:
+GDRAIN.bsn:
   type: float
   bounds: [0.0, .inf]
   file: {name: "basins.bsn", line: 84, start: 1, width: 16, precision: 3, maxNum: 1}
@@ -1308,7 +1308,7 @@ IATMODEP:
   bounds: [0.0, .inf]
   file: {name: "basins.bsn", line: 127, start: 1, width: 16, precision: 0, maxNum: 1}
 
-R2ADJ_BSN:
+R2ADJ.bsn:
   type: int
   bounds: [0.0, .inf]
   file: {name: "basins.bsn", line: 128, start: 1, width: 16, precision: 0, maxNum: 1}

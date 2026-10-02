@@ -1,0 +1,437 @@
+version: general
+basic:
+  projectPath: /home/wmtsky/projects/hydropilot/work/sihu_calibration/project
+  workPath: /home/wmtsky/projects/hydropilot/work/sihu_calibration/runs
+  command: /home/wmtsky/projects/swat2012/build/swat2012
+  timeout: 180
+  parallel: 1
+  keepCopies: true
+  reset: false
+functions:
+  - name: NSE
+    kind: builtin
+    args: []
+  - name: RMSE
+    kind: builtin
+    args: []
+  - name: PBIAS
+    kind: builtin
+    args: []
+parameters:
+  design:
+    - index: 0
+      name: CN2
+      type: float
+      bounds: [0.5, 1.5]
+    - index: 1
+      name: GW_DELAY
+      type: float
+      bounds: [0.0, 500.0]
+    - index: 2
+      name: ALPHA_BF
+      type: float
+      bounds: [0.0, 1.0]
+    - index: 3
+      name: GWQMN
+      type: float
+      bounds: [0.0, 500.0]
+    - index: 4
+      name: GW_REVAP
+      type: float
+      bounds: [0.02, 0.2]
+    - index: 5
+      name: REVAPMN
+      type: float
+      bounds: [0.0, 1.0]
+    - index: 6
+      name: RCHRG_DP
+      type: float
+      bounds: [0.0, 1.0]
+    - index: 7
+      name: SOL_AWC
+      type: float
+      bounds: [0.5, 1.5]
+    - index: 8
+      name: SOL_K
+      type: float
+      bounds: [0.5, 1.5]
+    - index: 9
+      name: SOL_ALB
+      type: float
+      bounds: [0.01, 0.25]
+    - index: 10
+      name: CH_N2
+      type: float
+      bounds: [-0.01, 0.3]
+    - index: 11
+      name: CH_K2
+      type: float
+      bounds: [-0.01, 500.0]
+    - index: 12
+      name: ALPHA_BNK
+      type: float
+      bounds: [0.05, 1.0]
+    - index: 13
+      name: TLAPS
+      type: float
+      bounds: [-10.0, 10.0]
+    - index: 14
+      name: SLSUBBSN
+      type: float
+      bounds: [0.5, 1.5]
+    - index: 15
+      name: HRU_SLP
+      type: float
+      bounds: [0.5, 1.5]
+    - index: 16
+      name: OV_N
+      type: float
+      bounds: [0.5, 1.5]
+    - index: 17
+      name: CANMX
+      type: float
+      bounds: [0.0, 100.0]
+    - index: 18
+      name: ESCO
+      scope: hru
+      type: float
+      bounds: [0.01, 1.0]
+    - index: 19
+      name: EPCO
+      scope: hru
+      type: float
+      bounds: [0.01, 1.0]
+    - index: 20
+      name: SURLAG
+      scope: hru
+      type: float
+      bounds: [0.05, 24.0]
+  physical:
+    - index: 0
+      name: CN2
+      type: float
+      mode: r
+      bounds: [35.0, 98.0]
+      writerType: fixed_width
+      file:
+        name: '*.mgt'
+        line: 11
+        start: 1
+        width: 16
+        precision: 2
+        maxNum: 1
+    - index: 1
+      name: GW_DELAY
+      type: float
+      mode: v
+      bounds: [0.0, 500.0]
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 4
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+    - index: 2
+      name: ALPHA_BF
+      type: float
+      mode: v
+      bounds: [0.0, 1.0]
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 5
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+    - index: 3
+      name: GWQMN
+      type: float
+      mode: v
+      bounds: [0.0, 500.0]
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 6
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+    - index: 4
+      name: GW_REVAP
+      type: float
+      mode: v
+      bounds: [0.02, 0.2]
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 7
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+    - index: 5
+      name: REVAPMN
+      type: float
+      mode: v
+      bounds: [0.0, 1.0]
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 8
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+    - index: 6
+      name: RCHRG_DP
+      type: float
+      mode: v
+      bounds: [0.0, 1.0]
+      writerType: fixed_width
+      file:
+        name: '*.gw'
+        line: 9
+        start: 1
+        width: 16
+        precision: 4
+        maxNum: 1
+    - index: 7
+      name: SOL_AWC
+      type: float
+      mode: r
+      bounds: [0.0, 1.0]
+      writerType: fixed_width
+      file:
+        name: '*.sol'
+        line: 10
+        start: 28
+        width: 12
+        precision: 2
+        maxNum: 10
+    - index: 8
+      name: SOL_K
+      type: float
+      mode: r
+      bounds: [0.0, 2000.0]
+      writerType: fixed_width
+      file:
+        name: '*.sol'
+        line: 11
+        start: 28
+        width: 12
+        precision: 2
+        maxNum: 10
+    - index: 9
+      name: SOL_ALB
+      type: float
+      mode: r
+      bounds: [0.0, 0.25]
+      writerType: fixed_width
+      file:
+        name: '*.sol'
+        line: 17
+        start: 28
+        width: 12
+        precision: 2
+        maxNum: 10
+    - index: 10
+      name: CH_N2
+      type: float
+      mode: v
+      bounds: [-0.01, 0.3]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.rte'
+        line: 6
+        start: 1
+        width: 14
+        precision: 3
+        maxNum: 1
+    - index: 11
+      name: CH_K2
+      type: float
+      mode: v
+      bounds: [-0.01, 500.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.rte'
+        line: 7
+        start: 1
+        width: 14
+        precision: 3
+        maxNum: 1
+    - index: 12
+      name: ALPHA_BNK
+      type: float
+      mode: v
+      bounds: [0.05, 1.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.rte'
+        line: 11
+        start: 1
+        width: 14
+        precision: 3
+        maxNum: 1
+    - index: 13
+      name: TLAPS
+      type: float
+      mode: v
+      bounds: [-10.0, 10.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.sub'
+        line: 22
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - index: 14
+      name: SLSUBBSN
+      type: float
+      mode: r
+      bounds: [10.0, 150.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 3
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - index: 15
+      name: HRU_SLP
+      type: float
+      mode: r
+      bounds: [0.0, 1.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 4
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - index: 16
+      name: OV_N
+      type: float
+      mode: r
+      bounds: [0.01, 30.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 5
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - index: 17
+      name: CANMX
+      type: float
+      mode: v
+      bounds: [0.0, 100.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 9
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - index: 18
+      name: ESCO
+      scope: hru
+      type: float
+      mode: v
+      bounds: [0.01, 1.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 10
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - index: 19
+      name: EPCO
+      scope: hru
+      type: float
+      mode: v
+      bounds: [0.01, 1.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 11
+        start: 1
+        width: 16
+        precision: 3
+        maxNum: 1
+    - index: 20
+      name: SURLAG
+      scope: hru
+      type: float
+      mode: v
+      bounds: [0.05, 24.0]
+      writerType: fixed_width
+      file:
+        name: '[0-9]*.hru'
+        line: 44
+        start: 1
+        width: 16
+        precision: 1
+        maxNum: 1
+  hardBound: true
+  transformer: null
+series:
+  - id: flow
+    desc: Reach 40 daily flow; scenario.obj COL_2 interpreted as FLOW_OUT
+    sim:
+      readerType: text
+      file: output.rch
+      rowRanges:
+        - [44985, 104845, 41]
+      colSpan: [52, 61]
+    obs:
+      readerType: text
+      file: obs_flow_2011_2014.txt
+      rowRanges:
+        - [1, 1461]
+      colNum: 1
+derived:
+  - id: nse
+    desc: nse
+    call:
+      func: NSE
+      args: [flow.sim, flow.obs]
+  - id: rmse
+    desc: rmse
+    call:
+      func: RMSE
+      args: [flow.sim, flow.obs]
+  - id: pbias
+    desc: pbias
+    call:
+      func: PBIAS
+      args: [flow.sim, flow.obs]
+objectives:
+  - id: obj_nse
+    ref: nse
+    desc: obj_nse
+    sense: max
+    on_error: -.inf
+diagnostics:
+  - id: diag_rmse
+    ref: rmse
+    name: diag_rmse
+    on_error: .nan
+  - id: diag_pbias
+    ref: pbias
+    name: diag_pbias
+    on_error: .nan
+reporter:
+  flushInterval: 50
+  holdingPenLimit: 20
+  series: [flow]

@@ -1,97 +1,140 @@
 import atexit
+from copy import deepcopy
 import csv
+from datetime import datetime
+import hashlib
+import json
+import logging
+from pathlib import Path
 import queue
 import sqlite3
 import threading
-import traceback
-from pathlib import Path
+import time
 
-from .records import (
-    build_csv_fields,
-    collect_error_entries,
-    make_error_json,
-    normalize_batch_run,
-    parse_report_ids,
-    record_status,
-    sanitize_labels,
-    to_scalar_or_nan,
-)
-from .serializers import series_blob, to_1d_float_list
-from .storage import flush_buffers, setup_storage, write_error_log, write_jsonl
+from .records import build_csv_fields, parse_report_ids, sanitize_labels
+from .storage import exportStorage, setupStorage, writeRecord
+
+
+logger = logging.getLogger(__name__)
+
+
+class _FlushRequest:
+    def __init__(self):
+        self.done = threading.Event()
 
 
 class RunReporter:
+    """Persist stage snapshots in SQLite, then export committed data."""
+
     def __init__(self, archivePath, xLabels, pLabels, cfg):
         self.cfg = cfg
         self.archivePath = Path(archivePath)
         self.archivePath.mkdir(parents=True, exist_ok=True)
-
         self.xLabels = sanitize_labels(xLabels)
         self.pLabels = sanitize_labels(pLabels) if pLabels else []
-
         self.dbPath = self.archivePath / "results.db"
         self.summaryCsv = self.archivePath / "summary.csv"
         self.errorJsonl = self.archivePath / "error.jsonl"
         self.errorLog = self.archivePath / "error.log"
-
-        self._parseIds()
-        self.startRunId = 1
-
-        # Reporter config
-        repCfg = getattr(self.cfg, "reporter", None)
+        self.allSeriesIds, self.allScalarIds, self.outSeriesIds = parse_report_ids(cfg)
+        self.derivedIds = [item.id for item in cfg.derived]
+        self.fields = build_csv_fields(self.allScalarIds, self.xLabels, self.pLabels)
+        self._reset_if_schema_changed()
+        self.configJson = None
+        self.configId = None
+        if hasattr(cfg, "model_dump"):
+            functionHashes = {
+                name: hashlib.sha256(spec.file.read_bytes()).hexdigest()
+                for name, spec in cfg.functions.items() if spec.file is not None
+            }
+            self.configJson = json.dumps({"config": cfg.model_dump(mode="json"),
+                                          "functionHashes": functionHashes}, sort_keys=True)
+            self.configId = hashlib.sha256(self.configJson.encode()).hexdigest()
+        repCfg = getattr(cfg, "reporter", None)
         self.flushInterval = int(getattr(repCfg, "flushInterval", 50)) if repCfg else 50
         self.holdingPenLimit = int(getattr(repCfg, "holdingPenLimit", 20)) if repCfg else 20
         if self.flushInterval <= 0:
             self.flushInterval = 50
         if self.holdingPenLimit <= 0:
             self.holdingPenLimit = 20
-
-        # Thread infrastructure
         self._q = queue.Queue()
         self._stop = object()
         self._thread = threading.Thread(target=self._worker, daemon=True)
-        self._batchNo = 0
         self._lock = threading.Lock()
         self._crashEvent = threading.Event()
         self._stopped = False
         self._started = False
-
         atexit.register(self.close)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    def _parseIds(self):
-        self.allSeriesIds, self.allScalarIds, self.outSeriesIds = parse_report_ids(self.cfg)
+    def _reset_if_schema_changed(self):
+        actual = None
+        if self.dbPath.exists():
+            try:
+                with sqlite3.connect(self.dbPath) as connection:
+                    actual = [row[1] for row in connection.execute("PRAGMA table_info(summary)")]
+            except sqlite3.Error:
+                return
+        elif self.summaryCsv.exists():
+            with self.summaryCsv.open(newline="", encoding="utf-8-sig") as stream:
+                actual = next(csv.reader(stream), [])
+        if actual is not None and actual != self.fields:
+            for path in (self.dbPath, self.summaryCsv, self.errorJsonl, self.errorLog):
+                path.unlink(missing_ok=True)
 
     def _buildCsvFields(self):
-        return build_csv_fields(self.allScalarIds, self.xLabels, self.pLabels)
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+        return list(self.fields)
 
     def start(self):
-        if self._stopped:
-            raise RuntimeError("RunReporter is already closed and cannot be restarted.")
-        if not self._started:
-            self._thread.start()
-            self._started = True
+        with self._lock:
+            if self._stopped:
+                raise RuntimeError("RunReporter is already closed and cannot be restarted.")
+            if not self._started:
+                self._started = True
+                self._thread.start()
 
     def submit(self, record):
-        if self._crashEvent.is_set():
-            raise RuntimeError("RunReporter has crashed; cannot submit new records.")
-        if self._stopped:
-            raise RuntimeError("RunReporter is closed; cannot submit new records.")
-        if not self._started:
-            self.start()
-        self._q.put(record)
-
-    def newBatchId(self):
+        if record.get("archive_stage") == "post":
+            allowed = set(self.allScalarIds + self.fields + ["i", "X", "P", "error", "postErrors", "warnings", "archive_stage"])
+            record = {key: value for key, value in record.items() if key in allowed}
+        snapshot = deepcopy(record)
+        snapshot["config_id"] = self.configId
         with self._lock:
-            self._batchNo += 1
-            return self._batchNo
+            if self._crashEvent.is_set():
+                raise RuntimeError("RunReporter has crashed; cannot submit new records.")
+            if self._stopped:
+                raise RuntimeError("RunReporter is closed; cannot submit new records.")
+            if not self._started:
+                self._started = True
+                self._thread.start()
+            self._q.put(snapshot)
+
+    def flush(self, timeout=30):
+        request = _FlushRequest()
+        with self._lock:
+            if self._crashEvent.is_set() or self._stopped:
+                raise RuntimeError("RunReporter is closed or has crashed.")
+            if not self._started:
+                self._started = True
+                self._thread.start()
+            self._q.put(request)
+        deadline = time.monotonic() + timeout
+        while not request.done.wait(0.05):
+            if self._crashEvent.is_set():
+                raise RuntimeError("RunReporter has crashed.")
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Timed out flushing RunReporter.")
+        if self._crashEvent.is_set():
+            raise RuntimeError("RunReporter has crashed.")
+
+    def close(self):
+        with self._lock:
+            if self._stopped:
+                return
+            self._stopped = True
+            if self._started:
+                self._q.put(self._stop)
+        if self._started:
+            self._thread.join()
 
     def __enter__(self):
         self.start()
@@ -101,256 +144,61 @@ class RunReporter:
         self.close()
         return False
 
-    def close(self):
-        if self._stopped:
-            return
-        self._stopped = True
-        if self._started:
-            self._q.put(self._stop)
-            self._thread.join()
-
-    # ------------------------------------------------------------------
-    # Worker thread
-    # ------------------------------------------------------------------
+    def _export(self, connection):
+        try:
+            exportStorage(connection, self.archivePath, self.fields, self.outSeriesIds)
+        except Exception as error:
+            message = f"Could not export committed archive data: {error}"
+            logger.warning("REPORTER_EXPORT_FAILED: %s", message)
+            connection.execute("INSERT OR IGNORE INTO errors VALUES (?,?,?,?,?,?,?,?,?)", (
+                -1, -1, "warning", "reporter", "REPORTER_EXPORT_FAILED", str(self.archivePath), message, "",
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ))
+            connection.commit()
 
     def _worker(self):
-        conn = None
-        csvFile = None
-        seriesCsvHandlers = {}
-        jsonlFile = None
-        logFile = None
-
+        connection = None
         try:
-            conn = sqlite3.connect(self.dbPath)
-            csvFields = self._buildCsvFields()
-            csvFile = open(self.summaryCsv, "a", newline="", encoding="utf-8-sig")
-            csvWriter = setup_storage(
-                conn, csvFile, csvFields,
-                self.allScalarIds, self.xLabels, self.pLabels,
-            )
-
-            for sk in self.outSeriesIds:
-                f = open(self.archivePath / f"{sk}.csv", "a", newline="", encoding="utf-8-sig")
-                import csv as _csv
-                seriesCsvHandlers[sk] = {"file": f, "writer": _csv.writer(f), "headerWritten": f.tell() > 0}
-
-            jsonlFile = open(self.errorJsonl, "a", encoding="utf-8")
-            logFile = open(self.errorLog, "a", encoding="utf-8")
-
-            # --- Buffers ---
-            summaryDbBuf = []
-            summaryCsvBuf = []
-            seriesDbBuf = []
-            seriesCsvBuf = {sk: [] for sk in self.outSeriesIds}
-            errorsDbBuf = []
-
-            holdingPen = {}
-            nextExpectedId = self.startRunId
-            currentBatchId = -1
-
-            # --- Main loop ---
+            connection = sqlite3.connect(self.dbPath)
+            setupStorage(connection, self.fields)
+            if self.configJson is not None:
+                connection.execute("INSERT OR REPLACE INTO metadata VALUES (?,?)",
+                                   (self.configId, self.configJson))
+                connection.commit()
+            updates = 0
             while True:
-                item = self._q.get()
                 try:
-                    if item is self._stop:
-                        remaining = sorted(holdingPen.keys())
-                        self._processHoldingPen(
-                            holdingPen, remaining, conn, csvFile, csvWriter,
-                            summaryDbBuf, summaryCsvBuf,
-                            seriesDbBuf, seriesCsvHandlers, seriesCsvBuf,
-                            errorsDbBuf, jsonlFile, logFile,
-                            forceFlush=True,
-                        )
-                        return
-
-                    rid = item.get("i", -1)
-                    rid = rid.item() if hasattr(rid, "item") else rid
-                    rid = int(rid) + 1
-
-                    bid = item.get("batch_id", -1)
-                    bid = bid.item() if hasattr(bid, "item") else bid
-                    bid = int(bid)
-
-                    if bid > currentBatchId:
-                        if holdingPen:
-                            remaining = sorted(holdingPen.keys())
-                            self._processHoldingPen(
-                                holdingPen, remaining, conn, csvFile, csvWriter,
-                                summaryDbBuf, summaryCsvBuf,
-                                seriesDbBuf, seriesCsvHandlers, seriesCsvBuf,
-                                errorsDbBuf, jsonlFile, logFile,
-                                forceFlush=True,
-                            )
-                        currentBatchId = bid
-                        nextExpectedId = self.startRunId
-                        holdingPen.clear()
-
-                    holdingPen[rid] = item
-
-                    # Flush consecutive ready ids
-                    readyIds = []
-                    while nextExpectedId in holdingPen:
-                        readyIds.append(nextExpectedId)
-                        nextExpectedId += 1
-
-                    # Holding pen overflow: flush all arrived records
-                    if not readyIds and len(holdingPen) >= self.holdingPenLimit:
-                        readyIds = sorted(holdingPen.keys())
-                        nextExpectedId = readyIds[-1] + 1
-
-                    if readyIds:
-                        self._processHoldingPen(
-                            holdingPen, readyIds, conn, csvFile, csvWriter,
-                            summaryDbBuf, summaryCsvBuf,
-                            seriesDbBuf, seriesCsvHandlers, seriesCsvBuf,
-                            errorsDbBuf, jsonlFile, logFile,
-                            forceFlush=False,
-                        )
+                    item = self._q.get(timeout=1)
+                except queue.Empty:
+                    if updates:
+                        connection.commit()
+                        self._export(connection)
+                        updates = 0
+                    continue
+                try:
+                    if item is self._stop or isinstance(item, _FlushRequest):
+                        connection.commit()
+                        self._export(connection)
+                        updates = 0
+                        if item is self._stop:
+                            return
+                    else:
+                        writeRecord(connection, item, self.fields, self.allScalarIds, self.allSeriesIds, self.derivedIds)
+                        updates += 1
+                        if updates >= min(self.flushInterval, self.holdingPenLimit):
+                            connection.commit()
+                            self._export(connection)
+                            updates = 0
+                except Exception:
+                    self._crashEvent.set()
+                    raise
                 finally:
+                    if isinstance(item, _FlushRequest):
+                        item.done.set()
                     self._q.task_done()
-
         except Exception:
             self._crashEvent.set()
-            print("\nRUN REPORTER CRASHED")
-            traceback.print_exc()
+            logger.exception("RUN REPORTER CRASHED")
         finally:
-            for f in [csvFile, jsonlFile, logFile]:
-                try:
-                    if f is not None:
-                        f.close()
-                except Exception:
-                    pass
-            for h in seriesCsvHandlers.values():
-                try:
-                    h["file"].close()
-                except Exception:
-                    pass
-            try:
-                if conn is not None:
-                    conn.close()
-            except Exception:
-                pass
-
-    def _processHoldingPen(
-        self, holdingPen, readyIds, conn, csvFile, csvWriter,
-        sDbBuf, sCsvBuf, serDbBuf, serCsvH, serCsvBuf,
-        errDbBuf, jsonlFile, logFile,
-        forceFlush=False,
-    ):
-        import numpy as np
-        for rid in readyIds:
-            item = holdingPen.pop(rid)
-            batchId, runId = normalize_batch_run(item)
-            status = record_status(item)
-
-            baseInfo = [batchId, runId, status]
-            scalarVals = []
-            for key in self.allScalarIds:
-                try:
-                    val = to_scalar_or_nan(item.get(key, np.nan))
-                except Exception:
-                    val = np.nan
-                scalarVals.append(val)
-
-            xVals = to_1d_float_list(item.get("X", []))
-            pVals = []
-            if self.pLabels:
-                pRaw = item.get("P", [])
-                if pRaw is None:
-                    pRaw = []
-                pArr = to_1d_float_list(pRaw)
-                for idx in range(len(self.pLabels)):
-                    pVals.append(pArr[idx] if idx < len(pArr) else np.nan)
-
-            dbRow = baseInfo + scalarVals + xVals + pVals
-            sDbBuf.append(dbRow)
-            sCsvBuf.append(list(dbRow))
-
-            self._writeErrorEntries(
-                batchId, runId, item.get("error"), item.get("warnings", []),
-                errDbBuf, jsonlFile, logFile,
-            )
-
-            if status != "error":
-                for sk in self.allSeriesIds:
-                    if sk in item:
-                        simData, blob = series_blob(item[sk])
-                        serDbBuf.append((batchId, runId, sk, blob))
-                        if sk in self.outSeriesIds and sk in serCsvBuf:
-                            serCsvBuf[sk].append([batchId, runId] + simData.tolist())
-
-        if (len(sDbBuf) >= self.flushInterval) or (forceFlush and len(sDbBuf) > 0):
-            flush_buffers(
-                conn, csvFile, csvWriter,
-                sDbBuf, sCsvBuf, serDbBuf, serCsvH, serCsvBuf,
-                errDbBuf, jsonlFile, logFile,
-            )
-
-    def _writeErrorEntries(self, batchId, runId, error, warnings,
-                           errDbBuf, jsonlFile, logFile):
-        for entry in collect_error_entries(error, warnings):
-            ts, jsonObj = make_error_json(batchId, runId, entry)
-            errDbBuf.append((
-                batchId, runId,
-                entry.get("severity", "fatal"),
-                entry.get("stage", ""),
-                entry.get("code", ""),
-                entry.get("target", ""),
-                entry.get("message", ""),
-            ))
-            write_jsonl(jsonlFile, jsonObj)
-            write_error_log(logFile, ts, batchId, runId, entry)
-
-    def _flush(self, conn, csvFile, csvWriter,
-               summaryDbBuf, summaryCsvBuf,
-               seriesDbBuf, seriesCsvHandlers, seriesCsvBuf,
-               errorsDbBuf, jsonlFile, logFile):
-        flush_buffers(
-            conn, csvFile, csvWriter,
-            summaryDbBuf, summaryCsvBuf,
-            seriesDbBuf, seriesCsvHandlers, seriesCsvBuf,
-            errorsDbBuf, jsonlFile, logFile,
-        )
-
-    # ------------------------------------------------------------------
-    # Flush buffers to disk
-    # ------------------------------------------------------------------
-
-    def _flush(
-        self, conn, csvFile, csvWriter,
-        summaryDbBuf, summaryCsvBuf,
-        seriesDbBuf, seriesCsvHandlers, seriesCsvBuf,
-        errorsDbBuf, jsonlFile, logFile,
-    ):
-        if summaryDbBuf:
-            placeholders = ",".join(["?"] * len(summaryDbBuf[0]))
-            conn.executemany(f"INSERT INTO summary VALUES ({placeholders})", summaryDbBuf)
-            summaryDbBuf.clear()
-        if summaryCsvBuf:
-            csvWriter.writerows(summaryCsvBuf)
-            csvFile.flush()
-            summaryCsvBuf.clear()
-        if seriesDbBuf:
-            conn.executemany("INSERT INTO series VALUES (?, ?, ?, ?)", seriesDbBuf)
-            seriesDbBuf.clear()
-        for sk, rows in seriesCsvBuf.items():
-            if rows:
-                h = seriesCsvHandlers.get(sk)
-                if h:
-                    if not h["headerWritten"]:
-                        size = len(rows[0]) - 2
-                        header = ["batch_id", "run_id"] + [f"V_{i+1}" for i in range(size)]
-                        h["writer"].writerow(header)
-                        h["headerWritten"] = True
-                    h["writer"].writerows(rows)
-                    h["file"].flush()
-                rows.clear()
-        if errorsDbBuf:
-            conn.executemany(
-                "INSERT INTO errors VALUES (?, ?, ?, ?, ?, ?, ?)", errorsDbBuf
-            )
-            errorsDbBuf.clear()
-        # Flush error log files
-        jsonlFile.flush()
-        logFile.flush()
-        conn.commit()
+            if connection is not None:
+                connection.close()

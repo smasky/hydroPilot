@@ -5,7 +5,7 @@ basic:
   command: ./pyxaj.exe run xaj.yaml
   timeout: -1
   parallel: 1
-  keepInstances: false
+  keepCopies: false
 functions:
   - name: NSE
     kind: builtin

@@ -1,9 +1,79 @@
 import traceback
+from copy import deepcopy
+from dataclasses import dataclass, field
+from threading import RLock
 from typing import Any
 
 import numpy as np
 
 from .errors import RunError
+
+
+@dataclass
+class PostState:
+    values: dict = field(default_factory=dict)
+    derivedValues: dict = field(default_factory=dict)
+    derivedErrors: dict = field(default_factory=dict)
+    errors: dict = field(default_factory=dict)
+    warnings: list = field(default_factory=list)
+    completed: set = field(default_factory=set)
+    fullCompleted: bool = False
+
+
+@dataclass
+class PostResult:
+    objs: np.ndarray | None
+    cons: np.ndarray | None
+    diags: np.ndarray | None
+
+
+@dataclass
+class SimulationContext:
+    """Owned simulation data and post-processing state for one batch."""
+
+    X: np.ndarray
+    P: np.ndarray | None
+    series: dict[str, np.ndarray] | None
+    obs: dict[str, np.ndarray] | None
+    records: tuple[dict, ...]
+    sourceToken: object = field(repr=False)
+    postStates: list[PostState] = field(default_factory=list, repr=False)
+    lock: Any = field(default_factory=RLock, repr=False)
+
+    def __post_init__(self):
+        self.records = tuple(deepcopy(record) for record in self.records)
+        self.X = self._ownArray(self.X)
+        self.P = None if self.P is None else self._ownArray(self.P)
+        self.series = self._ownArrays(self.series)
+        self.obs = self._ownArrays(self.obs)
+        self.postStates = [PostState() for _ in self.records]
+
+    @staticmethod
+    def _ownArray(values):
+        array = np.array(values, copy=True)
+        array.setflags(write=False)
+        return array
+
+    @classmethod
+    def _ownArrays(cls, values):
+        return None if values is None else {key: cls._ownArray(value) for key, value in values.items()}
+
+    def recordSnapshot(self, index):
+        record = deepcopy(self.records[index])
+        state = self.postStates[index]
+        record.update(deepcopy(state.derivedValues))
+        record.update(deepcopy(state.values))
+        record["postErrors"] = list(state.errors.values())
+        if state.errors and "error" not in record:
+            record["error"] = next(iter(state.errors.values()))
+        record["warnings"] = record.get("warnings", []) + deepcopy(state.warnings)
+        for target, block in [("objs", "obj"), ("cons", "con"), ("diags", "diag")]:
+            record[f"{block}_state"] = (
+                "skipped" if record.get(f"{block}_state") == "skipped" else
+                "error" if target in state.errors else "done" if target in state.completed
+                else record.get(f"{block}_state", "pending")
+            )
+        return record
 
 KEY_X = "X"
 KEY_P = "P"

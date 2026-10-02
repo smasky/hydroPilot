@@ -44,7 +44,8 @@ basic:
   command: swat.exe
   timeout: -1
   parallel: 1
-  keepInstances: false
+  keepCopies: false
+  reset: false
 ```
 
 | 字段 | 是否必需 | 类型 | 默认值 | 说明 |
@@ -54,7 +55,8 @@ basic:
 | `command` | 是 | 字符串或列表 | — | 模型可执行命令。可以是单个字符串，也可以是参数列表。 |
 | `timeout` | 否 | int | `-1` | 每次运行的超时秒数。`-1` 表示无超时。 |
 | `parallel` | 否 | int | `1` | 并行工作线程数。每个线程拥有独立的项目副本。 |
-| `keepInstances` | 否 | bool | `false` | 设为 `true` 时保留每次运行的实例目录，默认清理。 |
+| `keepCopies` | 否 | bool | `false` | 关闭会话时保留项目副本、输出与日志，并将涉及的输入文件恢复到会话开始时的内容；否则删除副本。 |
+| `reset` | 否 | bool | `false` | 调试时可开启，每次模拟结束后恢复涉及的输入文件，与 `keepCopies` 独立。 |
 
 `projectPath` 和 `workPath` 相对于配置文件所在目录解析。
 
@@ -101,7 +103,7 @@ parameters:
 |---|---|---|---|---|
 | `design` | 是 | 非空列表 | — | 暴露给优化器的设计变量。 |
 | `physical` | 是 | 非空列表 | — | 写入模型输入文件的物理参数。 |
-| `hardBound` | 否 | bool | `true` | 若为 `true`，设计值在变换前会被限制在 `bounds` 范围内。 |
+| `hardBound` | 否 | bool | `true` | 若为 `true`，应用写入模式后的值会被限制在物理参数的 `bounds` 范围内。 |
 | `transformer` | 否 | 字符串或 null | `null` | 已注册的变换器名称，用于将设计空间映射到物理空间。 |
 
 ### 设计参数
@@ -111,6 +113,7 @@ parameters:
 | 字段 | 是否必需 | 类型 | 默认值 | 说明 |
 |---|---|---|---|---|
 | `name` | 是 | string | — | 参数名称。 |
+| `scope` | 否 | string | — | 参数定义的所属范围。general 模式中的同名 design 条目必须指定不同 scope。SWAT 同名参数自动补全默认局部 scope；`bsn` 选择流域级定义。 |
 | `type` | 否 | `"float"`、`"int"`、`"discrete"` | `"float"` | 变量类型。 |
 | `bounds` | 否 | `[下界, 上界]` | `[0, 1]` | 允许的取值范围。 |
 | `sets` | 否 | list | `[]` | 离散值集合（用于 `"discrete"` 类型）。 |
@@ -122,12 +125,19 @@ parameters:
 | 字段 | 是否必需 | 类型 | 默认值 | 说明 |
 |---|---|---|---|---|
 | `name` | 是 | string | — | 参数名称。 |
+| `scope` | 否 | string | — | 与 `name` 一起选择参数定义，并用于模板中的 design/physical 匹配。SWAT 使用与 design 相同的默认规则。 |
 | `type` | 否 | `"float"`、`"int"` | `"float"` | 值类型。 |
 | `bounds` | 否 | `[下界, 上界]` | `[0, 1]` | 允许的取值范围。 |
-| `mode` | 否 | `"r"`、`"v"`、`"a"` | `"v"` | 写入模式：相对（r）、值（v）、绝对（a）。 |
+| `mode` | 否 | `"r"`、`"v"`、`"a"` | `"v"` | 写入模式：`r` 为原值 × (1 + 输入)，`v` 为输入值，`a` 为原值 + 输入。 |
 | `writerType` | 否 | `"fixed_width"`、`"csv"` | `"fixed_width"` | 写入器类型。 |
 | `file` | 是 | 映射 | — | 目标文件与写入位置（字段因写入器类型而异）。 |
 | `sets` | 否 | list | `[]` | 离散值集合。 |
+
+SWAT/XAJ 模板中，显式 `physical.bounds` 优先；未指定时，`v` 模式可继承同名 design 的边界，`r`/`a` 模式使用参数库的物理边界。设计变量的相对变化量或增量边界不会作为最终文件值的边界。
+
+参数名与 scope 分开填写，例如 `name: ESCO`、`scope: bsn`，不再写 `name: ESCO.bsn`。SWAT 中的 scope 表示输入文件类型，如 `bsn`、`hru`、`mgt`。SWAT 模板默认按解析后的 `(name, scope)` 匹配，并使 physical 顺序与 design 一致；general 模式仍按位置映射。优化器标签包含 scope（`ESCO.bsn`），归档列沿用现有格式（`X_ESCO_bsn`、`P_ESCO_bsn`）。
+
+SWAT 同名参数省略 scope 时自动选择局部定义，不产生 warning：DDRAIN/TDRAIN/GDRAIN 默认 `mgt`，EPCO/ESCO/R2ADJ/SURLAG 默认 `hru`。需要流域级定义时填写 `scope: bsn`。design 的重复标识检查在默认 scope 补全后进行。
 
 如果 `design` 与 `physical` 列表长度不同，则必须提供 `transformer`。
 
@@ -315,8 +325,8 @@ reporter:
 
 | 字段 | 是否必需 | 类型 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `flushInterval` | 否 | int | `50` | 每 N 次运行将记录刷新到磁盘。 |
-| `holdingPenLimit` | 否 | int | `20` | 触发强制刷新前可持有的最大记录数。 |
+| `flushInterval` | 否 | int | `50` | 每 N 次阶段记录更新提交 SQLite 并刷新导出文件。 |
+| `holdingPenLimit` | 否 | int | `20` | 尚未提交的阶段记录更新上限，达到后提前刷新。 |
 | `series` | 否 | 字符串列表 | `[]` | 需要导出为逐次运行 CSV 的序列 `id` 列表。 |
 
 `archive/` 目录下的输出产物：
@@ -326,6 +336,14 @@ reporter:
 - `error.jsonl` — 结构化的错误条目
 - `error.log` — 纯文本错误日志
 - `reporter.series` 中列出的每个序列 `id` 对应的逐次运行 CSV 文件
+
+SQLite 是正式存储，后台线程先提交事务，再从已提交数据导出 CSV 和错误日志。队列空闲时会刷新剩余更新；正常关闭时排空队列并完成最终导出。导出通过临时文件替换正式文件，失败时记录 `REPORTER_EXPORT_FAILED` warning，数据库仍可继续保存并在后续刷新时重试导出。
+
+模拟和后处理分别提交独立快照，以 `(batch_id, run_id)` 更新同一条样本记录。重复后处理不增加评估次数。`summary.csv` 保持参数和指标列顺序，并在末尾增加 `sim_status`、`obj_state`、`con_state`、`diag_state`。模拟状态为 `ok`、`warning` 或 `error`；指标块状态为 `pending`、`done`、`error` 或 `skipped`（未配置）。未计算指标留空，通过状态列与失败区分。
+
+数据库的 `summary` 保存标量和阶段状态，`series` 与 `derived` 保存数组的 dtype、shape 和原始数值；`observations` 保存去重观测，`observation_refs` 将样本关联到观测数据。`metadata` 保存配置及外部函数文件指纹，`run_metadata` 保存逐样本配置引用和参数写入信息。后处理失败不会丢弃已成功提取的模拟序列。
+
+Reporter 负责归档。提交归档记录失败时，执行层在运行上下文中记录 `REPORTER_SUBMIT_FAILED` warning，并通过日志输出批次、样本编号和原因。运行继续，返回结果及原有 `on_error` 回填值保持不变。归档服务不可用时，该警告的提示通过日志完成，不能保证写入归档文件。
 
 ## 路径语义
 
@@ -421,6 +439,10 @@ sim:
 | `precision` | 否 | 浮点数格式化的小数位数。 |
 | `maxNum` | 否 | 从 `start` 起扫描的连续字段个数。 |
 | `selectIndex` | 否 | 当设置了 `maxNum` 时，仅选取第 N 个扫描到的条目（1 起始）。省略时写入所有扫描到的条目。 |
+
+`maxNum` 是扫描上限，不要求每个 HRU 都有这么多土层。省略 `selectIndex` 时写入所有实际存在的字段。指定土层时，缺少该层的文件正常跳过；部分匹配会记录 `PARTIAL_TARGET_MATCH` warning，说明实际写入和跳过的文件数量。单次运行的 `param.registrationSummary` 按物理参数索引记录这些数量。所有目标文件均缺少所选条目时，实例初始化报错。
+
+扫描到的非空字段无法解析、数值非有限、字段不完整或目标行不存在时，按文件格式错误报错，不当作缺层跳过。SWAT 模板的 inline `location.selectIndex` 会保留到展开后的 general 配置。
 
 **CSV 写入器 `file` 字段：**
 

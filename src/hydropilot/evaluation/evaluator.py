@@ -1,6 +1,9 @@
+from copy import deepcopy
+from dataclasses import replace
+
 import numpy as np
 
-from ..runtime.context import append_warning, ensure_warnings
+from ..runtime.context import PostState, append_warning, ensure_warnings
 from ..runtime.errors import RunError
 
 
@@ -13,7 +16,113 @@ class Evaluator:
             self._parse_objectives_constraints()
         )
         self.diag_refs = self._parse_diagnostics()
-        self.fatalDerivedIds = self._build_fatal_derived_ids()
+        self.derivedIndex = {item.id: item for item in cfg.derived}
+        self.blocks = {
+            "objs": cfg.objectives.items,
+            "cons": cfg.constraints.items,
+            "diags": cfg.diagnostics.items,
+        }
+
+    def _requiredDerived(self, refs):
+        required = set()
+        pending = list(refs)
+        while pending:
+            key = pending.pop()
+            if key not in self.derivedIndex or key in required:
+                continue
+            required.add(key)
+            pending.extend(self.derivedIndex[key].call.args)
+        return required
+
+    @staticmethod
+    def _addWarning(state, error):
+        warning = replace(error, severity="warning")
+        if not any(item.to_dict() == warning.to_dict() for item in state.warnings):
+            state.warnings.append(warning)
+
+    def _compute(self, context, state, targets, includeUnused=False):
+        env = deepcopy(context)
+        env.update(deepcopy(state.derivedValues))
+        refs = [item.ref for target in targets for item in self.blocks[target]]
+        required = self._requiredDerived(refs)
+        fatalTargets = tuple(self.blocks) if includeUnused else targets
+        fatal = self._requiredDerived(
+            item.ref for target in fatalTargets if target != "diags" for item in self.blocks[target]
+        )
+        if includeUnused:
+            required.update(self.derivedIndex)
+
+        for derived in self.cfg.derived:
+            key = derived.id
+            if key not in required:
+                continue
+            if key not in state.derivedValues and key not in state.derivedErrors:
+                try:
+                    missing = next((arg for arg in derived.call.args if arg not in env), None)
+                    if missing is not None:
+                        raise RunError("derived", "DEPENDENCY_MISSING", key,
+                                       f"Derived '{key}' requires context key '{missing}'")
+                    upstream = next((arg for arg in derived.call.args if arg in state.derivedErrors), None)
+                    if upstream is not None:
+                        raise RunError("derived", "DEPENDENCY_FAILED", key,
+                                       f"Derived '{key}' requires failed derived '{upstream}'")
+                    args = [self._normalize_value(deepcopy(env[arg])) for arg in derived.call.args]
+                    value = self.funcManager.call(derived.call.func, *args)
+                    if value is None:
+                        raise RunError("derived", "EMPTY_RESULT", key, f"Derived '{key}' returned None")
+                    state.derivedValues[key] = deepcopy(value)
+                except RunError as error:
+                    state.derivedErrors[key] = replace(error, severity="fatal")
+                except Exception as error:
+                    state.derivedErrors[key] = RunError(
+                        "derived", "UNEXPECTED_ERROR", key, f"Derived '{key}' failed: {error}"
+                    )
+            if key in state.derivedErrors:
+                error = state.derivedErrors[key]
+                if key in fatal:
+                    raise replace(error, severity="fatal")
+                self._addWarning(state, error)
+                env[key] = np.nan
+                state.derivedValues[key] = np.nan
+            else:
+                env[key] = deepcopy(state.derivedValues[key])
+
+        for target in targets:
+            items = self.blocks[target]
+            refsById = {item.id: item.ref for item in items}
+            if target == "diags":
+                warningContext = {"warnings": []}
+                values = self._collect_diagnostic_values(refsById, env, warningContext)
+                for warning in warningContext["warnings"]:
+                    self._addWarning(state, warning)
+            else:
+                values = self._collect_record_values(refsById, env, "Objective" if target == "objs" else "Constraint")
+            state.values.update(values)
+
+    def _post(self, context, state, targets):
+        """Compute requested blocks once, with caches owned by this simulation."""
+        pending = tuple(key for key in self.blocks if key in targets and key not in state.completed)
+        isFull = set(targets) == set(self.blocks)
+        if not pending and (not isFull or state.fullCompleted):
+            return
+        try:
+            previousError = next((state.errors[key] for key in targets if key in state.errors), None)
+            if previousError is not None:
+                raise previousError
+            self._compute(context, state, pending, includeUnused=isFull)
+        except RunError as error:
+            for target in targets:
+                state.errors[target] = error
+                state.values.update({item.id: item.on_error for item in self.blocks[target]})
+        except Exception as error:
+            failure = RunError("evaluator", "UNEXPECTED_ERROR", "post", str(error))
+            for target in targets:
+                state.errors[target] = failure
+                state.values.update({item.id: item.on_error for item in self.blocks[target]})
+        finally:
+            state.completed.update(targets)
+            if isFull:
+                state.fullCompleted = True
 
     def _parse_objectives_constraints(self):
         optType = []
@@ -38,50 +147,6 @@ class Evaluator:
         for diag_cfg in self.cfg.diagnostics.items:
             diag_refs[diag_cfg.id] = diag_cfg.ref
         return diag_refs
-
-    def _build_fatal_derived_ids(self):
-        """Build set of derived ids that are required by objectives or constraints.
-
-        A derived whose failure would prevent computing an objective or constraint
-        is fatal. A derived only referenced by diagnostics is non-fatal (warning).
-        """
-        # Collect all ref targets from objectives and constraints
-        fatalRefs = set()
-        for ref in self.obj_refs.values():
-            fatalRefs.add(ref)
-        for ref in self.con_refs.values():
-            fatalRefs.add(ref)
-
-        # Build derived dependency map: derived_id -> set of dependency ids
-        derivedDeps = {}
-        for d in self.cfg.derived:
-            deps = set()
-            if d.call:
-                for contextKey in d.call.args:
-                    deps.add(contextKey)
-            derivedDeps[d.id] = deps
-
-        # Traverse: any derived that is in fatalRefs or is depended on by a fatal derived
-        fatalIds = set()
-        changed = True
-        while changed:
-            changed = False
-            for d in self.cfg.derived:
-                if d.id in fatalIds:
-                    continue
-                # Direct: this derived is referenced by an objective/constraint
-                if d.id in fatalRefs:
-                    fatalIds.add(d.id)
-                    changed = True
-                    continue
-                # Indirect: a fatal derived depends on this derived
-                for otherId in fatalIds:
-                    if d.id in derivedDeps.get(otherId, set()):
-                        fatalIds.add(d.id)
-                        changed = True
-                        break
-
-        return fatalIds
 
     def _normalize_value(self, val):
         if isinstance(val, (list, tuple, np.ndarray)):
@@ -143,62 +208,13 @@ class Evaluator:
         return result
 
     def evaluate_all(self, context):
-        env = context
-        record = {}
-        ensure_warnings(context)
-
-        for derived in self.cfg.derived:
-            d_id = derived.id
-            isFatal = d_id in self.fatalDerivedIds
-
-            try:
-                func_name = derived.call.func
-                args_list = derived.call.args
-                func_args = []
-                for context_key in args_list:
-                    if context_key not in env:
-                        raise RunError(
-                            stage="derived",
-                            code="DEPENDENCY_MISSING",
-                            target=d_id,
-                            message=f"Derived '{d_id}' requires context key '{context_key}'"
-                        )
-                    func_args.append(self._normalize_value(env[context_key]))
-                result = self.funcManager.call(func_name, *func_args)
-
-                if result is None:
-                    raise RunError(
-                        stage="derived",
-                        code="EMPTY_RESULT",
-                        target=d_id,
-                        message=f"Derived '{d_id}' returned None"
-                    )
-
-                env[d_id] = result
-
-            except RunError as e:
-                if isFatal:
-                    raise
-                append_warning(context, e)
-                env[d_id] = float("nan")
-
-            except Exception as e:
-                err = RunError(
-                    stage="derived",
-                    code="UNEXPECTED_ERROR",
-                    target=d_id,
-                    message=f"Derived '{d_id}' failed: {e}",
-                )
-                if isFatal:
-                    raise err from e
-                append_warning(context, err)
-                env[d_id] = float("nan")
-
-        record.update(self._collect_record_values(self.obj_refs, env, "Objective"))
-        record.update(self._collect_record_values(self.con_refs, env, "Constraint"))
-        record.update(self._collect_diagnostic_values(self.diag_refs, env, context))
-
-        return record
+        state = PostState()
+        try:
+            self._compute(context, state, tuple(self.blocks), includeUnused=True)
+        finally:
+            context.update(state.derivedValues)
+            ensure_warnings(context).extend(state.warnings)
+        return state.values
 
     def get_evaluation_info(self):
         return self.nOutput, self.optType, self.nConstraints

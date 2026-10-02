@@ -164,7 +164,7 @@ class CsvWriter(ParamWriter):
                 ub = int(ub)
 
         self.params[spec.index] = CsvParameter(
-            name=spec.name,
+            name=getattr(spec, "label", spec.name),
             index=spec.index,
             entries=entries,
             mode=spec.modeCode,

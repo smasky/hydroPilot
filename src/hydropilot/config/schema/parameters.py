@@ -8,12 +8,21 @@ TYPE_MAP = {"float": 0, "int": 1, "discrete": 2}
 MODE_MAP = {"r": 0, "v": 1, "a": 2}
 
 
+def parameterLabel(name: str, scope: Optional[str] = None) -> str:
+    return f"{name}.{scope}" if scope is not None else name
+
+
 class DesignParameterSpec(ConfigNode):
     index: int = -1
     name: str
+    scope: Optional[str] = Field(default=None, min_length=1, pattern=r"^\S+$")
     type: str = "float"
     bounds: List[float] = Field(default_factory=lambda: [0, 1])
     sets: List[float] = Field(default_factory=list)
+
+    @property
+    def label(self) -> str:
+        return parameterLabel(self.name, self.scope)
 
     @property
     def typeCode(self) -> int:
@@ -31,12 +40,17 @@ class DesignParameterSpec(ConfigNode):
 class PhysicalParameterSpec(ConfigNode):
     index: int = -1
     name: str
+    scope: Optional[str] = Field(default=None, min_length=1, pattern=r"^\S+$")
     type: str = "float"
     mode: str = "v"
     bounds: List[float] = Field(default_factory=lambda: [0, 1])
     writerType: str = "fixed_width"
     file: Dict[str, Any]
     sets: List[float] = Field(default_factory=list)
+
+    @property
+    def label(self) -> str:
+        return parameterLabel(self.name, self.scope)
 
     @property
     def typeCode(self) -> int:

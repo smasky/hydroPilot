@@ -60,12 +60,12 @@ def load_config(path: Union[str, Path]) -> RunConfig:
     """Public entry point for loading config.
 
     For version='general', parses directly into RunConfig.
-    For other versions (swat, vic, etc.), delegates to the
+    For registered template versions (swat, swatplus, xaj), delegates to the
     corresponding ModelTemplate to transform simplified config
     into a standard RunConfig.
 
     The resolved general config is automatically written to
-    ``<workPath>/<original_name>_general.yaml`` for user inspection.
+    ``<original_name>_general.yaml`` beside the source YAML for user inspection.
     """
     prepared = prepare_config(path)
     _print_pre_run_warnings(prepared.diagnostics)
@@ -216,14 +216,18 @@ def _config_to_user_dict(cfg: RunConfig, source_raw: dict[str, Any]) -> dict[str
 
 
 def _basic_to_dict(basic) -> dict[str, Any]:
-    return {
+    data = {
         "projectPath": _path_to_str(basic.projectPath),
         "workPath": _path_to_str(basic.workPath),
         "command": basic.command,
         "timeout": basic.timeout,
         "parallel": basic.parallel,
-        "keepInstances": basic.keepInstances,
+        "keepCopies": basic.keepCopies,
+        "reset": basic.reset,
     }
+    if basic.workDirName is not None:
+        data["workDirName"] = basic.workDirName
+    return data
 
 
 def _parameters_to_dict(parameters) -> dict[str, Any]:
@@ -342,7 +346,7 @@ def _normalize_plain(value):
         return {
             k: _normalize_plain(v)
             for k, v in value.items()
-            if not (k == "sets" and v == [])
+            if not (k == "sets" and v == []) and not (k == "scope" and v is None)
         }
     if isinstance(value, tuple):
         return [_normalize_plain(v) for v in value]

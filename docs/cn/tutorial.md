@@ -245,7 +245,7 @@ basic:
   projectPath: ./project
   workPath: ./work
   command: my_model.exe
-  keepInstances: false
+  keepCopies: false
 ```
 
 这三个字段都很关键：
@@ -253,16 +253,18 @@ basic:
 - `projectPath`：原始模型工程目录
 - `workPath`：HydroPilot 创建临时运行目录的位置
 - `command`：在每个运行实例目录里启动的外部命令
-- `keepInstances`：是否在运行结束后保留 `instance_*` 临时目录，默认 `false`
+- `keepCopies`：关闭时是否保留 `instance_*` 目录，默认 `false`；保留时恢复涉及的输入，输出与日志保留
+- `reset`：每次模拟结束后是否恢复输入，默认 `false`，调试时可开启
 
 默认情况下，HydroPilot 会在 `Session.close()` 或进程退出时清理 `instance_*` 目录，只保留 `archive/` 中的结果、配置副本和错误日志。调试参数写入、模型中间文件或外部程序失败现场时，可以临时设置：
 
 ```yaml
 basic:
-  keepInstances: true
+  keepCopies: true
 ```
 
 调试结束后建议改回默认值，避免模型工程副本长期占用磁盘。
+输入文件在关闭时恢复到会话开始时的内容；查看实际写入值可使用参数归档。若需要逐次恢复输入，可另设 `reset: true`。
 
 当前版本里，`command` 可以写成：
 
@@ -602,5 +604,4 @@ pip install -e .[dev]
 2. 先让 `hydropilot-validate` 通过
 3. 再确认外部模型工程和 `command` 可独立运行
 4. 最后再用 `SimModel.run()` 接进批量评估或优化流程
-
 

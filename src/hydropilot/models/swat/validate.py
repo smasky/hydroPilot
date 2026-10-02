@@ -2,21 +2,17 @@ from pathlib import Path
 from typing import Any
 
 from hydropilot.config.paths import resolve_config_path
+from hydropilot.config.schema.parameters import parameterLabel
 from hydropilot.models.swat.discovery import discover_swat_project
 from hydropilot.models.swat.variables import normalize_period_window
+from hydropilot.models.swat.library import SWAT_PARAMETER_SCOPES, resolveParameterScope
 from hydropilot.validation.diagnostics import Diagnostic, error, warning
 
 
 SWAT_ROW_FIELDS = {"id", "period"}
 SWAT_OUTPUT_FILES = {"output.rch", "output.sub", "output.hru"}
-AMBIGUOUS_SWAT_PARAMETER_ALIASES = {
-    "DDRAIN": ["DDRAIN_BSN", "DDRAIN_MGT"],
-    "EPCO": ["EPCO_BSN", "EPCO_HRU"],
-    "ESCO": ["ESCO_BSN", "ESCO_HRU"],
-    "GDRAIN": ["GDRAIN_BSN", "GDRAIN_MGT"],
-    "R2ADJ": ["R2ADJ_BSN", "R2ADJ_HRU"],
-    "SURLAG": ["SURLAG_BSN", "SURLAG_HRU"],
-    "TDRAIN": ["TDRAIN_BSN", "TDRAIN_MGT"],
+AMBIGUOUS_SWAT_PARAMETER_SCOPES = {
+    name: scopes for name, scopes in SWAT_PARAMETER_SCOPES.items() if len(scopes) > 1
 }
 
 
@@ -158,16 +154,26 @@ def _validate_swat_parameter_name_list(items: Any, path_prefix: str) -> list[Dia
         return []
 
     diagnostics: list[Diagnostic] = []
+    identities = set()
     for item in items:
         if not isinstance(item, dict) or "name" not in item:
             continue
         name = str(item["name"])
-        candidates = AMBIGUOUS_SWAT_PARAMETER_ALIASES.get(name)
-        if candidates:
+        try:
+            resolved = resolveParameterScope(item, SWAT_PARAMETER_SCOPES)
+            identity = (resolved["name"], resolved.get("scope"))
+            if path_prefix == "parameters.design" and identity in identities:
+                diagnostics.append(error(
+                    f"{path_prefix}[{name}]",
+                    f"duplicate design parameter identity: {parameterLabel(name, resolved.get('scope'))}",
+                ))
+            identities.add(identity)
+        except ValueError as exc:
+            candidates = SWAT_PARAMETER_SCOPES.get(name, [])
             diagnostics.append(error(
                 f"{path_prefix}[{name}]",
-                f"ambiguous SWAT parameter name '{name}'",
-                f"use one of the explicit SWAT parameter names: {', '.join(candidates)}",
+                str(exc),
+                f"set scope to one of: {', '.join(candidates)}" if candidates else None,
             ))
     return diagnostics
 

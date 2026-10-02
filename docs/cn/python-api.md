@@ -53,15 +53,21 @@ result: BatchRunResult = model.run([
 ])
 ```
 
-- `X` — 设计参数值的列表或 numpy 数组，顺序与配置中 `parameters.design` 列表的定义顺序一致。一维数组执行单次评估；形状为 `(样本数, 输入数)` 的二维数组执行批量运行。单次评估也支持以字典方式按名称传入：`model.run({"CN2": 72.5, "ALPHA_BF": 0.3, "GW_DELAY": 120})`。
+- `X` — 设计参数值的列表或 numpy 数组，顺序与配置中 `parameters.design` 列表的定义顺序一致。一维数组执行单次评估；形状为 `(样本数, 输入数)` 的二维数组执行批量运行。
 - 返回 `BatchRunResult`。批量运行时，`result.objs` 的形状为 `(样本数, 目标数)`。
 
-每次评估的内部流程：
-1. 从 `basic.projectPath` 复制项目到 `basic.workPath` 下的临时实例目录。
-2. 将设计值变换为物理参数并写入模型输入文件。
-3. 在项目副本中执行模型命令（`basic.command`）。
-4. 提取模拟输出并进行评估（目标、约束、诊断）。
-5. 结果与产物归档，项目副本被释放（或当 `keepInstances: true` 时保留）。
+`run(X)` 组合参数写入、模拟和后处理，独立于 UQPyL。会话初始化时准备 `basic.workPath` 下的项目副本，后续模拟复用这些副本。
+
+每个样本的内部流程：
+
+1. 批量调度入口 `_runSimulation(X)` 为每个样本取得工作副本，调用 `_apply(workPath, X, context)` 完成设计值到物理参数的变换、输入写入和写入信息记录。
+2. `_simulate(workPath, context)` 在同一份已准备好的副本中执行 `basic.command` 并提取序列。调度层在提取后释放副本，组装独立的批量 context，并提交模拟快照归档；此时指标为 pending。
+3. `_post` 从 context 计算 derived、目标、约束和诊断，缓存结果，并提交快照更新同一条样本记录。
+4. reporter 将快照提交到 SQLite，再从已提交数据导出 CSV 和错误日志。
+
+关闭会话时会等待 reporter 完成归档，并清理项目副本；`keepCopies: true` 时恢复涉及的输入文件到会话开始时的内容，保留副本、输出与日志。调试时可另设 `reset: true`，每次模拟后也恢复输入；默认 `false`。
+
+内部 `_apply` 与 `_simulate` 可以分别组合：`_apply` 不运行模型、不分配评估记录；`_simulate` 使用已写好的输入，不重复变换或写入参数。批量调度负责编号、副本持有、错误处理和归档。需要单独生成项目副本时，使用下面的公开 `apply_design` 或 `apply_params`。
 
 ### `apply_design(X, out_dir)`
 
@@ -91,7 +97,7 @@ model.apply_params([0.75, 0.003, 0.22], "./my_project")
 | 属性 | 类型 | 说明 |
 |----------|------|-------------|
 | `nInput` | `int` | 设计输入参数的数量 |
-| `xLabels` | `list[str]` | 设计参数的名称列表 |
+| `xLabels` | `list[str]` | 设计参数标签列表；指定 scope 时包含 scope，例如 `ESCO.bsn` |
 | `lb` | `list[float]` | 各设计参数的下界 |
 | `ub` | `list[float]` | 各设计参数的上界 |
 | `varType` | `list[int]` | 变量类型编码（0=float, 1=int, 2=discrete） |
@@ -121,6 +127,7 @@ from hydropilot import BatchRunResult
 | `cons` | `np.ndarray` 或 `None` | 约束值，形状 `(样本数, 约束数)`。未定义约束时为 `None`。 |
 | `diags` | `np.ndarray` 或 `None` | 诊断值，形状 `(样本数, 诊断数)`。未定义诊断时为 `None`。 |
 | `series` | `dict[str, np.ndarray]` 或 `None` | 按序列 id 索引的提取时间序列，每个形状 `(样本数, 时间步数)`。未执行序列提取时为 `None`。 |
+| `obs` | `dict[str, np.ndarray]` 或 `None` | 按序列 id 索引的观测数组，每个形状 `(时间步数,)`。未配置观测时为 `None`。 |
 
 ### 使用示例
 
@@ -136,7 +143,7 @@ print(result.X)        # [[72.5, 0.3, 120.0]]
 
 ## `UQPyLAdapter`
 
-将 `SimModel` 包装为 UQPyL `Problem`，用于 UQPyL 的优化和分析算法。
+将 `SimModel` 包装为 UQPyL `ModelProblem`，用于 UQPyL 的优化和校准算法。
 
 ```python
 from hydropilot.integrations import UQPyLAdapter
@@ -146,7 +153,7 @@ adapter = UQPyLAdapter("path/to/config.yaml")
 
 ### 说明
 
-`UQPyLAdapter` 继承自 `UQPyL.problem.Problem`，内部委托给 `SimModel`。它从 hydroPilot 配置中提取 UQPyL 问题定义（`nInput`、`nObj`、`nCon`、边界、变量类型、目标方向）。
+`UQPyLAdapter` 直接继承 `UQPyL.problem.ModelProblem` 的公开接口，内部委托给 `SimModel` 执行模型。它从 HydroPilot 配置中提取问题定义（`nInput`、`nObj`、`nCon`、边界、变量类型、目标方向和标签），并构建 `obs`、`mask`、`seriesLabels`。
 
 ### 上下文管理器
 
@@ -158,35 +165,43 @@ with UQPyLAdapter("config.yaml") as adapter:
 
 ### 方法
 
-#### `evaluate(X)`
+#### `evaluate(X, target=None)`
 
 ```python
 result = adapter.evaluate(X)
 objs = result.objs
 cons = result.cons
+sim = result.sims
 ```
 
-运行模型并返回 `UQPyL.problem.Eval` 对象。与调用 `evaluate()` 的 UQPyL 算法兼容。
+运行模型并返回 `UQPyL.problem.Eval` 对象。`result.sims` 的形状为 `(n_samples, n_time, n_series)`。
 
-#### `objFunc(X)`
+`target` 可选 `None`（全部字段）、`"objs"`、`"cons"` 或 `"sims"`。默认执行模拟与全部后处理，包括写入归档的诊断。`"objs"`、`"cons"` 只计算对应块及其依赖；`"sims"` 跳过后处理。每次调用都会启动新的模拟。
+
+#### 分开调用模拟与评估
+
+| 方法 | 返回内容 |
+|---|---|
+| `simulate(X)` | `SimContext` 子类，包含 `sims`、`obs`、`mask`，以及 `simulation` 中完整的 HydroPilot 模拟数据；此时不计算指标 |
+| `simFunc(X)` | 形状为 `(n_samples, n_time, n_series)` 的模拟数组 |
+| `objFunc(X, context)` | 计算该 context 的目标及其依赖，已计算时复用结果 |
+| `conFunc(X, context)` | 计算该 context 的约束及其依赖；未配置约束时返回 `None` |
 
 ```python
-objectives = adapter.objFunc(X)
+with UQPyLAdapter("config.yaml") as problem:
+    contextA = problem.simulate(XA)
+    contextB = problem.simulate(XB)
+    objA = problem.objFunc(XA, contextA)
+    physicalA = contextA.simulation.P
 ```
 
-仅返回目标值（NumPy 数组）。与调用 `objFunc(X)` 的 UQPyL 优化器兼容。
+每个 context 保存自己的模拟数据与后处理状态。目标／约束调用按需计算，不再次运行模型；重复调用复用结果。各阶段更新同一条样本归档记录，只模拟时也保存记录，未计算指标标记为 pending。context 必须由同一适配器返回，`X` 必须与产生它的参数相符；参数不匹配、另一适配器的 context、手工构造的 context 都会触发 `ValueError`。`flattenSim`、`flattenObs`、`flattenMask` 也直接继承原生实现。
 
-#### `conFunc(X)`
-
-```python
-constraints = adapter.conFunc(X)
-```
-
-仅返回约束值（NumPy 数组）。如果配置中未定义约束则返回 `None`。
+有观测数据时，暴露带 `obs` 的序列；没有观测数据时，暴露全部配置的模拟序列，`obs` 和 `mask` 为 `None`，可用于普通优化。`seriesLabels` 为这些序列的 id，至少需要一条模拟序列。观测缺失和观测长度补齐位置在 `mask` 中为 `True`，模拟 NaN 不会改变这个 mask。
 
 ### 适用范围
 
-适配器提供基础的 UQPyL `Problem` 接口：问题定义、返回 `Eval` 的评估接口以及目标/约束访问器。它不实现 UQPyL 专属的分析方法（敏感性分析、代理建模等）。对于高级 UQPyL 工作流，可将适配器作为 `Problem` 使用，并直接调用 UQPyL 自身的分析函数。
+适配器提供 UQPyL `ModelProblem` 接口：问题定义、基于模拟序列的评估接口，以及观测序列元数据。它不实现 UQPyL 专属的分析方法。
 
 ### 示例：使用适配器
 
@@ -199,12 +214,10 @@ with UQPyLAdapter("config.yaml") as adapter:
     objs = result.objs
     cons = result.cons
 
-    # 或分别获取目标与约束
-    objs = adapter.objFunc(X)
-    cons = adapter.conFunc(X)
+    sim = result.sims
 ```
 
-适配器可传递给任何接受 `Problem` 实例的 UQPyL 算法。
+适配器可传递给任何接受 `ModelProblem` 实例的 UQPyL 算法。
 
 当前的 UQPyL 优化器使用 `algorithm.run(problem)`：
 
@@ -218,3 +231,5 @@ with UQPyLAdapter("config.yaml") as problem:
     print(result.bestDecs)
     print(result.bestObjs)
 ```
+
+同一个适配器也可直接用于 GLUE、SUFI2 等校准方法；这些比较模拟与观测的方法需要配置观测序列。

@@ -44,7 +44,8 @@ basic:
   command: swat.exe
   timeout: -1
   parallel: 1
-  keepInstances: false
+  keepCopies: false
+  reset: false
 ```
 
 | Field | Required | Type | Default | Description |
@@ -54,7 +55,8 @@ basic:
 | `command` | yes | string or list | — | Model executable command. Can be a single string or a list of arguments. |
 | `timeout` | no | int | `-1` | Per-run timeout in seconds. `-1` means no timeout. |
 | `parallel` | no | int | `1` | Number of parallel worker threads. Each worker gets its own project copy. |
-| `keepInstances` | no | bool | `false` | If `true`, per-run instance directories are preserved instead of cleaned up. |
+| `keepCopies` | no | bool | `false` | Preserve project copies, outputs and logs after closing the session; touched input files are restored to their session-start contents. Otherwise copies are deleted. |
+| `reset` | no | bool | `false` | Restore touched input files after every simulation for debugging, independently of `keepCopies`. |
 
 `projectPath` and `workPath` are resolved relative to the configuration file directory.
 
@@ -101,7 +103,7 @@ parameters:
 |---|---|---|---|---|
 | `design` | yes | non-empty list | — | Design variables exposed to the optimizer. |
 | `physical` | yes | non-empty list | — | Physical parameters written to model input files. |
-| `hardBound` | no | bool | `true` | If `true`, design values are clamped to `bounds` before transformation. |
+| `hardBound` | no | bool | `true` | If `true`, values after applying the write mode are clamped to physical parameter `bounds`. |
 | `transformer` | no | string or null | `null` | Name of a registered transformer that maps design space to physical space. |
 
 ### Design parameters
@@ -111,6 +113,7 @@ Each item in `design`:
 | Field | Required | Type | Default | Description |
 |---|---|---|---|---|
 | `name` | yes | string | — | Parameter name. |
+| `scope` | no | string | — | Qualifier for the parameter definition. General mode requires distinct scopes for repeated design names. SWAT fills the default local scope for parameters with multiple definitions; `bsn` selects the basin definition. |
 | `type` | no | `"float"`, `"int"`, `"discrete"` | `"float"` | Variable type. |
 | `bounds` | no | `[lower, upper]` | `[0, 1]` | Allowed range. |
 | `sets` | no | list | `[]` | Discrete value set (for `"discrete"` type). |
@@ -122,12 +125,19 @@ Each item in `physical`:
 | Field | Required | Type | Default | Description |
 |---|---|---|---|---|
 | `name` | yes | string | — | Parameter name. |
+| `scope` | no | string | — | Qualifier used with `name` to select and match the parameter definition in templates. SWAT uses the same defaults as design parameters. |
 | `type` | no | `"float"`, `"int"` | `"float"` | Value type. |
 | `bounds` | no | `[lower, upper]` | `[0, 1]` | Allowed range. |
-| `mode` | no | `"r"`, `"v"`, `"a"` | `"v"` | Write mode: relative, value, or absolute. |
+| `mode` | no | `"r"`, `"v"`, `"a"` | `"v"` | Write mode: `r` = original × (1 + input), `v` = input, `a` = original + input. |
 | `writerType` | no | `"fixed_width"`, `"csv"` | `"fixed_width"` | Writer type. |
 | `file` | yes | mapping | — | File target and write location (fields vary by writer). |
 | `sets` | no | list | `[]` | Discrete value set. |
+
+In SWAT/XAJ templates, explicit `physical.bounds` take precedence. Otherwise, `v` mode can inherit bounds from the matching design parameter; `r`/`a` modes use physical bounds from the parameter database. Bounds on design changes are not limits on the final file values.
+
+Keep the parameter name separate from its scope: write `name: ESCO` and `scope: bsn`, rather than `name: ESCO.bsn`. SWAT scopes identify input file types, such as `bsn`, `hru`, and `mgt`. In SWAT templates, default mapping matches the resolved `(name, scope)` identity and orders physical entries to follow design entries. General mode keeps positional mapping. Optimizer labels include scope (`ESCO.bsn`); archive columns use the existing sanitized form (`X_ESCO_bsn`, `P_ESCO_bsn`).
+
+For SWAT parameters with multiple definitions, an omitted scope silently selects the local definition: DDRAIN/TDRAIN/GDRAIN use `mgt`; EPCO/ESCO/R2ADJ/SURLAG use `hru`. Specify `scope: bsn` to select the basin definition. Design identity checks run after defaults are resolved.
 
 If `design` and `physical` lists have different lengths, a `transformer` must be provided.
 
@@ -315,8 +325,8 @@ reporter:
 
 | Field | Required | Type | Default | Description |
 |---|---|---|---|---|
-| `flushInterval` | no | int | `50` | Flush records to disk every N runs. |
-| `holdingPenLimit` | no | int | `20` | Max records held before forced flush. |
+| `flushInterval` | no | int | `50` | Commit SQLite and refresh exports every N stage-record updates. |
+| `holdingPenLimit` | no | int | `20` | Maximum uncommitted stage-record updates before an early flush. |
 | `series` | no | list of strings | `[]` | Series `id` values to export as per-run CSV files. |
 
 Output artifacts in `archive/`:
@@ -326,6 +336,14 @@ Output artifacts in `archive/`:
 - `error.jsonl` — structured error entries
 - `error.log` — plain-text error log
 - Per-series CSV files for each `id` listed in `reporter.series`
+
+SQLite is the primary store. The worker commits its transaction before exporting CSV and error logs from committed data. Pending updates are flushed when the queue is idle; normal close drains the queue and completes a final export. Exports replace their destination through a temporary file. Export failure produces a `REPORTER_EXPORT_FAILED` warning while database persistence continues; later flushes retry exports.
+
+Simulation and post-processing submit owned snapshots that update the same `(batch_id, run_id)` sample record. Repeated post-processing does not add evaluations. `summary.csv` preserves parameter/metric column order and appends `sim_status`, `obj_state`, `con_state`, and `diag_state`. Simulation status is `ok`, `warning`, or `error`; metric blocks are `pending`, `done`, `error`, or `skipped` (not configured). Uncomputed metrics are blank and distinguishable from failures through the state columns.
+
+The database stores scalars and stage states in `summary`, and array dtype, shape, and original values in `series` and `derived`. `observations` deduplicates observed data, linked to samples through `observation_refs`. `metadata` preserves configurations and external-function file hashes; `run_metadata` stores each sample's configuration reference and parameter-write information. Post-processing failure does not discard successfully extracted simulation series.
+
+The reporter handles archiving. If record submission fails, the executor adds a `REPORTER_SUBMIT_FAILED` warning to the run context and logs the batch, sample number, and reason. Execution continues with run results and existing `on_error` fallback values unchanged. When the archive service is unavailable, this warning is reported through logging; persistence in archive files is not guaranteed.
 
 ## Path semantics
 
@@ -421,6 +439,10 @@ All fallback values can be overridden with an explicit `on_error` field.
 | `precision` | no | Decimal places for float formatting. |
 | `maxNum` | no | Number of sequential fields to scan from `start`. |
 | `selectIndex` | no | When `maxNum` is set, pick only the Nth scanned entry (1-based). Omitted `selectIndex` writes all scanned entries. |
+
+`maxNum` is a scan limit, not a required layer count for every HRU. Without `selectIndex`, all existing fields are written. With a selected layer, files missing that layer are skipped. Partial matches produce a `PARTIAL_TARGET_MATCH` warning reporting matched and skipped file counts; the run context records counts by physical parameter index in `param.registrationSummary`. Instance initialization fails if no target file has a writable entry for a parameter.
+
+Malformed nonempty fields, nonfinite values, incomplete fields, and missing rows raise format errors instead of being treated as absent layers. SWAT inline `location.selectIndex` is preserved in the expanded general config.
 
 **CSV writer `file` fields:**
 

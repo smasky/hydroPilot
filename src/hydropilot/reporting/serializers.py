@@ -1,15 +1,14 @@
-import sqlite3
+import json
 
 import numpy as np
 
 
-def to_1d_float_list(value):
-    if value is None:
-        return []
-    arr = np.asarray(value, dtype=float).ravel()
-    return arr.tolist()
+def encodeArray(value):
+    array = np.asarray(value)
+    if array.dtype.hasobject:
+        raise TypeError("Archived arrays must not contain Python objects.")
+    return array.dtype.str, json.dumps(array.shape), array.tobytes(order="C")
 
 
-def series_blob(value):
-    simData = np.asarray(value, dtype=np.float32).ravel()
-    return simData, sqlite3.Binary(simData.tobytes())
+def decodeArray(data, dtype, shape):
+    return np.frombuffer(data, dtype=np.dtype(dtype)).reshape(json.loads(shape)).copy()

@@ -1,0 +1,219 @@
+{
+  "source": "/home/wmtsky/projects/swat2012/examples/sihu",
+  "observations": 1461,
+  "period": [
+    "2011-01-01",
+    "2014-12-31"
+  ],
+  "relative_indices": [
+    0,
+    7,
+    8,
+    9,
+    14,
+    15,
+    16
+  ],
+  "parameter_mapping": [
+    {
+      "design": "CN2",
+      "physical": "CN2",
+      "mode": "r",
+      "bounds": [
+        0.5,
+        1.5
+      ]
+    },
+    {
+      "design": "GW_DELAY",
+      "physical": "GW_DELAY",
+      "mode": "v",
+      "bounds": [
+        0.0,
+        500.0
+      ]
+    },
+    {
+      "design": "ALPHA_BF",
+      "physical": "ALPHA_BF",
+      "mode": "v",
+      "bounds": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "design": "GWQMN",
+      "physical": "GWQMN",
+      "mode": "v",
+      "bounds": [
+        0.0,
+        500.0
+      ]
+    },
+    {
+      "design": "GW_REVAP",
+      "physical": "GW_REVAP",
+      "mode": "v",
+      "bounds": [
+        0.02,
+        0.2
+      ]
+    },
+    {
+      "design": "REVAPMN",
+      "physical": "REVAPMN",
+      "mode": "v",
+      "bounds": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "design": "RCHRG_DP",
+      "physical": "RCHRG_DP",
+      "mode": "v",
+      "bounds": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "design": "SOL_AWC",
+      "physical": "SOL_AWC",
+      "mode": "r",
+      "bounds": [
+        0.5,
+        1.5
+      ]
+    },
+    {
+      "design": "SOL_K",
+      "physical": "SOL_K",
+      "mode": "r",
+      "bounds": [
+        0.5,
+        1.5
+      ]
+    },
+    {
+      "design": "SOL_ALB",
+      "physical": "SOL_ALB",
+      "mode": "r",
+      "bounds": [
+        0.01,
+        0.25
+      ]
+    },
+    {
+      "design": "CH_N2",
+      "physical": "CH_N2",
+      "mode": "v",
+      "bounds": [
+        -0.01,
+        0.3
+      ]
+    },
+    {
+      "design": "CH_K2",
+      "physical": "CH_K2",
+      "mode": "v",
+      "bounds": [
+        -0.01,
+        500.0
+      ]
+    },
+    {
+      "design": "ALPHA_BNK",
+      "physical": "ALPHA_BNK",
+      "mode": "v",
+      "bounds": [
+        0.05,
+        1.0
+      ]
+    },
+    {
+      "design": "TLAPS",
+      "physical": "TLAPS",
+      "mode": "v",
+      "bounds": [
+        -10.0,
+        10.0
+      ]
+    },
+    {
+      "design": "SLSUBBSN",
+      "physical": "SLSUBBSN",
+      "mode": "r",
+      "bounds": [
+        0.5,
+        1.5
+      ]
+    },
+    {
+      "design": "HRU_SLP",
+      "physical": "HRU_SLP",
+      "mode": "r",
+      "bounds": [
+        0.5,
+        1.5
+      ]
+    },
+    {
+      "design": "OV_N",
+      "physical": "OV_N",
+      "mode": "r",
+      "bounds": [
+        0.5,
+        1.5
+      ]
+    },
+    {
+      "design": "CANMX",
+      "physical": "CANMX",
+      "mode": "v",
+      "bounds": [
+        0.0,
+        100.0
+      ]
+    },
+    {
+      "design": "ESCO",
+      "physical": "ESCO",
+      "mode": "v",
+      "bounds": [
+        0.01,
+        1.0
+      ],
+      "scope": "hru"
+    },
+    {
+      "design": "EPCO",
+      "physical": "EPCO",
+      "mode": "v",
+      "bounds": [
+        0.01,
+        1.0
+      ],
+      "scope": "hru"
+    },
+    {
+      "design": "SURLAG",
+      "physical": "SURLAG",
+      "mode": "v",
+      "bounds": [
+        0.05,
+        24.0
+      ],
+      "scope": "hru"
+    }
+  ],
+  "interpretations": [
+    "Legacy r and HydroPilot both use original * (1 + r); default mapping P = X preserves scenario.par values and bounds.",
+    "COL_2 interpreted as FLOW_OUT based on intended streamflow target; original reader source not available.",
+    "ESCO/EPCO/SURLAG use the default hru definitions; no scope override is configured."
+  ],
+  "project_preparation": "Copied inputs and added tmp1.tmp alias; original source unchanged.",
+  "CH_K2_override": "Removed after normalizing numeric input rows to the standard pipe columns; uses library width 14, precision 3.",
+  "input_alignment": "CN2 mgt pipe column 21; CH_K2 rte pipe column 19. Numeric tokens and comments preserved; backups under work/sihu_format_backups."
+}

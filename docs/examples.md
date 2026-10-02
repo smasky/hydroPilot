@@ -82,7 +82,7 @@ Key differences from the daily example:
 The most feature-rich example. Demonstrates:
 
 - **Transformer**: 4 design parameters map to 6 physical parameters via `monthly_transform.py`. Design-space values (CN2_factor, ESCO_val, etc.) are transformed before writing.
-- **HRU filters**: CN2 parameters filtered by land use (`AGRL` and `URHD`). ESCO_HRU split across two subbasin ranges (1–30 and 31–62). The filter engine (`filterHrus`) resolves `*.mgt` patterns to concrete filenames per HRU.
+- **HRU filters**: CN2 parameters filtered by land use (`AGRL` and `URHD`). `ESCO` (default `hru` scope) split across two subbasin ranges (1–30 and 31–62). The filter engine (`filterHrus`) resolves `*.mgt` patterns to concrete filenames per HRU.
 - **Multi-series**: Two series (`flow` and `tn`) from the same `output.rch` file using different column spans.
 - **Multi-objective**: Two NSE objectives (flow and TN), both maximized.
 - **Diagnostics**: KGE, RMSE, and an external function (`calc_annual_tn_load`) computed from the TN series — diagnostics are tracked but not optimized.
@@ -143,7 +143,7 @@ Four Python scripts in `examples/` provide reusable external functions.
 A **transformer** that maps 4 design parameters to 6 physical parameters:
 
 ```
-X[0] (CN2_factor)    → P[0] (CN2 for AGRL), P[1] (CN2 for URHD)
+X[0] (CN2_factor) - 1 → P[0], P[1] (relative CN2 changes for AGRL and URHD)
 X[1] (ESCO_val)      → P[2] (ESCO sub 1–30), P[3] (ESCO sub 31–62)
 X[2] (GW_DELAY_val)  → P[4] (GW_DELAY global)
 X[3] (SURLAG_val)    → P[5] (SURLAG global)
@@ -206,7 +206,7 @@ Use `hydropilot-test` to run a full smoke test (one evaluation with a default pa
 hydropilot-test examples/test_daily.yaml
 ```
 
-This loads the config, creates a temporary project copy, applies default parameters, runs the model command, extracts results, and writes a test report. It forces `parallel: 1` and `keepInstances: true`.
+This loads the config, creates a temporary project copy, applies default parameters, runs the model command, extracts results, and writes a test report. It forces `parallel: 1` and `keepCopies: true`. Closing restores touched inputs while preserving outputs, logs and the parameter CSV with applied values. `reset` is still controlled by the config.
 
 ## Running a single evaluation
 

@@ -30,7 +30,7 @@ Implemented:
 
 Current model entry point:
 
-- [`src/hydropilot/models/swatplus/template.py`](/Users/smasky/Desktop/hydroPilot/hydroPilot/src/hydropilot/models/swatplus/template.py)
+- [`src/hydropilot/models/swatplus/template.py`](../../src/hydropilot/models/swatplus/template.py)
 
 ### 2. Parameter writing route
 

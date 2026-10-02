@@ -226,7 +226,7 @@ parameters:
 parameters:
   design:
     - name: CN2_factor      # 优化器调一个因子
-      bounds: [-0.2, 0.2]
+      bounds: [0.8, 1.2]
     - name: ESCO_val
       bounds: [0.1, 0.9]
     - name: GW_DELAY_val
@@ -235,21 +235,26 @@ parameters:
       bounds: [0.5, 24]
 
   physical:
-    - name: CN2_AGRL
-      mode: v
+    - name: CN2
+      mode: r
       filter:
         land_use: AGRL
-    - name: CN2_URHD
-      mode: v
+    - name: CN2
+      mode: r
       filter:
         land_use: URHD
-    - name: ESCO_1_30
+    - name: ESCO
       mode: v
-    - name: ESCO_31_62
+      filter:
+        subbasin: [1, 2, 3]
+    - name: ESCO
       mode: v
+      filter:
+        subbasin: [4, 5, 6]
     - name: GW_DELAY
       mode: v
     - name: SURLAG
+      scope: bsn
       mode: v
 
   transformer: monthly_transform
@@ -265,6 +270,8 @@ functions:
 ```
 
 在这个例子中，4 个 design 参数通过 transformer 映射到 6 个 physical 参数。优化器只看到 4 维。
+
+`monthly_transform.py` 将 CN2 倍率减去 1 后传给 `mode: r`；倍率 1.0 表示保持原值，0.8/1.2 表示减少/增加 20%。两个 ESCO 分组的子流域 ID 需要按实际工程调整。
 
 **适用场景：**
 - 空间正则化（一个因子 → 多个带标定偏移的 HRU 组）。

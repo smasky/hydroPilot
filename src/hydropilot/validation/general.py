@@ -8,6 +8,7 @@ from hydropilot.config.specs import RunConfig
 from hydropilot.io.writers import getWriter
 from hydropilot.io.readers import getReader
 from hydropilot.config.schema.series import ReaderSpec
+from hydropilot.config.schema.parameters import parameterLabel
 from hydropilot.validation.diagnostics import Diagnostic, error, has_error, warning
 
 
@@ -56,6 +57,19 @@ def _validate_general_structure(raw: dict[str, Any]) -> list[Diagnostic]:
     for key in ("projectPath", "workPath", "command"):
         if key not in basic:
             diagnostics.append(error(f"basic.{key}", f"missing required basic field '{key}'"))
+    work_dir_name = basic.get("workDirName")
+    if work_dir_name is not None:
+        if not isinstance(work_dir_name, str) or not work_dir_name.strip():
+            diagnostics.append(error("basic.workDirName", "basic.workDirName must be a non-empty string"))
+        else:
+            path = Path(work_dir_name.strip())
+            if path.is_absolute() or len(path.parts) != 1 or work_dir_name.strip() in {".", ".."}:
+                diagnostics.append(
+                    error("basic.workDirName", "basic.workDirName must be a single directory name under basic.workPath")
+                )
+    for field in ("keepCopies", "reset"):
+        if field in basic and not isinstance(basic.get(field), bool):
+            diagnostics.append(error(f"basic.{field}", f"basic.{field} must be a boolean"))
     return diagnostics
 
 
@@ -110,6 +124,12 @@ def _validate_parameter_counts(params: dict[str, Any], design: list[Any], physic
 
 def _validate_general_design(design: list[Any]) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
+    counts: dict[str, int] = {}
+    labels: set[str] = set()
+    identities: set[tuple[str, str | None]] = set()
+    for item in design:
+        if isinstance(item, dict) and isinstance(item.get("name"), str):
+            counts[item["name"]] = counts.get(item["name"], 0) + 1
     for index, item in enumerate(design):
         if not isinstance(item, dict):
             diagnostics.append(error(f"parameters.design[{index}]", "design item must be a mapping"))
@@ -118,6 +138,18 @@ def _validate_general_design(design: list[Any]) -> list[Diagnostic]:
         path = f"parameters.design[{name}]"
         if "name" not in item:
             diagnostics.append(error(path, "missing design parameter name"))
+        diagnostics.extend(_validate_parameter_scope(item, path))
+        scope = item.get("scope")
+        if counts.get(name, 0) > 1 and scope is None:
+            diagnostics.append(error(path, f"scope is required for repeated design parameter name '{name}'"))
+        label = parameterLabel(name, scope)
+        identity = (name, scope) if isinstance(scope, str) else (name, None)
+        if identity in identities:
+            diagnostics.append(error(path, f"duplicate design parameter identity: {label}"))
+        elif label in labels:
+            diagnostics.append(error(path, f"conflicting design parameter labels: {label}"))
+        identities.add(identity)
+        labels.add(label)
         if "bounds" not in item:
             diagnostics.append(error(path, "missing design parameter bounds"))
         elif not _valid_bounds(item["bounds"]):
@@ -135,8 +167,16 @@ def _validate_general_physical(physical: list[Any]) -> list[Diagnostic]:
         path = f"parameters.physical[{name}]"
         if "name" not in item:
             diagnostics.append(error(path, "missing physical parameter name"))
+        diagnostics.extend(_validate_parameter_scope(item, path))
         diagnostics.extend(_validate_writer_node(item, path))
     return diagnostics
+
+
+def _validate_parameter_scope(item: dict[str, Any], path: str) -> list[Diagnostic]:
+    scope = item.get("scope")
+    if scope is not None and (not isinstance(scope, str) or not scope or any(c.isspace() for c in scope)):
+        return [error(f"{path}.scope", "scope must be a non-empty string without whitespace")]
+    return []
 
 
 def _validate_writer_node(node: dict[str, Any], path: str) -> list[Diagnostic]:

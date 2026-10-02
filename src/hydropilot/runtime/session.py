@@ -2,6 +2,7 @@ import atexit
 import signal
 
 from ..reporting.reporter import RunReporter
+from ..reporting.storage import readLastBatchId
 from .executor import Executor
 from .workspace import Workspace
 
@@ -11,6 +12,7 @@ class Session:
         self.cfg = cfg
         self.cfgPath = cfg_path
         self._closed = False
+        self._inputSnapshots = []
 
         self.workspace = Workspace(cfg, cfg_path)
         self.executor = Executor(cfg, self.workspace, reporter=None)
@@ -21,8 +23,20 @@ class Session:
 
         pLabels = self._physical_parameter_labels(self.cfg)
         self.reporter = RunReporter(self.workspace.archivePath, self.xLabels, pLabels, self.cfg)
+        self.executor.initializeBatchCounter(readLastBatchId(self.workspace.archivePath))
         self.reporter.start()
         self.executor.reporter = self.reporter
+
+        if self.cfg.basic.keepCopies:
+            try:
+                for index in range(self.cfg.basic.parallel):
+                    instancePath = self.workspace.runPath / f"instance_{index}"
+                    self._inputSnapshots.append(
+                        self.executor.inputRestorer.capture(str(instancePath))
+                    )
+            except Exception:
+                self.close()
+                raise
 
         atexit.register(self._cleanup_on_exit)
         try:
@@ -81,7 +95,7 @@ class Session:
 
     @staticmethod
     def _physical_parameter_labels(cfg):
-        return [p.name for p in cfg.parameters.physical]
+        return [getattr(p, "label", p.name) for p in cfg.parameters.physical]
 
     def run(self, X):
         return self.executor.run(X)
@@ -95,7 +109,17 @@ class Session:
                 self.reporter.close()
             except Exception as e:
                 print(f"[Session.close] reporter.close() failed: {e}")
-        if not self.cfg.basic.keepInstances:
+        for snapshot in self._inputSnapshots:
+            try:
+                snapshot.restore()
+            except Exception as e:
+                print(f"[Session.close] input restoration failed: {e}")
+        self._inputSnapshots.clear()
+        try:
+            self.executor.services.paramWritePlan.clear_instance_tasks()
+        except Exception as e:
+            print(f"[Session.close] paramWritePlan.clear_instance_tasks() failed: {e}")
+        if not self.cfg.basic.keepCopies:
             try:
                 self.workspace.cleanup_instances()
             except Exception as e:

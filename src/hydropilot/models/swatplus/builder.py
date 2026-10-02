@@ -233,6 +233,8 @@ def _build_calibration_entries(
             "file": fileSpec,
             "_resolved_ids": obj_ids,
         }
+        if pp.get("scope") is not None:
+            item["scope"] = pp["scope"]
         if pp.get("bounds"):
             item["bounds"] = pp["bounds"]
         if pp.get("filter"):

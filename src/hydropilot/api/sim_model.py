@@ -60,6 +60,18 @@ class SimModel:
     def run(self, X):
         return self.session.run(X)
 
+    def _runSimulation(self, X):
+        return self.session.executor._runSimulation(X)
+
+    def _apply(self, workPath, X, context):
+        return self.session.executor._apply(workPath, X, context)
+
+    def _simulate(self, workPath, context):
+        return self.session.executor._simulate(workPath, context)
+
+    def _post(self, context, target=None):
+        return self.session.executor._post(context, target)
+
     def apply_design(self, X, out_dir):
         return apply_design_params(self.cfg, X, out_dir)
 

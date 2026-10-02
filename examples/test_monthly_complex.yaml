@@ -17,7 +17,7 @@ basic:
 parameters:
   design:
     - name: CN2_factor
-      bounds: [0.8, 1.2]
+      bounds: [0.8, 1.2]  # multiplier; transformer returns factor - 1 for mode r
     - name: ESCO_val
       bounds: [0.5, 0.95]
     - name: GW_DELAY_val
@@ -34,17 +34,18 @@ parameters:
       mode: r
       filter:
         land_use: URHD
-    - name: ESCO_HRU
+    - name: ESCO
       mode: v
       filter:
         subbasin: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
-    - name: ESCO_HRU
+    - name: ESCO
       mode: v
       filter:
         subbasin: [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62]
     - name: GW_DELAY
       mode: v
-    - name: SURLAG_BSN
+    - name: SURLAG
+      scope: bsn
       mode: v
 
   transformer: "monthly_transform"
@@ -136,6 +137,5 @@ diagnostics:
   - id: diag_tn_load
     name: "Annual TN load"
     ref: annual_tn
-
 
 
